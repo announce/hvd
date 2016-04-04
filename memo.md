@@ -9,3 +9,6 @@ $ pip install GitPython
 
 #### TODOs
 * [ ] PostgreSQL http://tdoc.info/blog/2012/12/05/psycopg2.html
+
+#### Books
+* https://github.com/luispedro/BuildingMachineLearningSystemsWithPython.git 
