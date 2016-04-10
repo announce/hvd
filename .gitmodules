@@ -1,0 +1,4 @@
+[submodule "BuildingMachineLearningSystemsWithPython"]
+	path = BuildingMachineLearningSystemsWithPython
+	url = https://github.com/luispedro/BuildingMachineLearningSystemsWithPython.git
+	branch = first_edition
