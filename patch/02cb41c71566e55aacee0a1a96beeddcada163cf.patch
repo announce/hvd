@@ -1,0 +1,1709 @@
+diff --git a/src/frame-element.cc b/src/frame-element.cc
+index e6bc2ea..9b69e63 100644
+--- a/src/frame-element.cc
++++ b/src/frame-element.cc
+@@ -35,6 +35,17 @@ namespace internal {
+ // -------------------------------------------------------------------------
+ // FrameElement implementation.
+ 
++NumberInfo::Type FrameElement::number_info() {
++  // Copied elements do not have number info. Instead
++  // we have to inspect their backing element in the frame.
++  ASSERT(!is_copy());
++  if (!is_constant()) return NumberInfoField::decode(value_);
++  Handle<Object> value = handle();
++  if (value->IsSmi()) return NumberInfo::kSmi;
++  if (value->IsHeapNumber()) return NumberInfo::kHeapNumber;
++  return NumberInfo::kUnknown;
++}
++
+ 
+ FrameElement::ZoneObjectList* FrameElement::ConstantList() {
+   static ZoneObjectList list(10);
+diff --git a/src/frame-element.h b/src/frame-element.h
+index d1807f6..800e78d 100644
+--- a/src/frame-element.h
++++ b/src/frame-element.h
+@@ -28,6 +28,7 @@
+ #ifndef V8_FRAME_ELEMENT_H_
+ #define V8_FRAME_ELEMENT_H_
+ 
++#include "number-info.h"
+ #include "macro-assembler.h"
+ 
+ namespace v8 {
+@@ -52,11 +53,18 @@ class FrameElement BASE_EMBEDDED {
+     SYNCED
+   };
+ 
++  NumberInfo::Type number_info();
++  void set_number_info(NumberInfo::Type info) {
++    value_ = value_ & ~NumberInfoField::mask();
++    value_ = value_ | NumberInfoField::encode(info);
++  }
++
+   // The default constructor creates an invalid frame element.
+   FrameElement() {
+     value_ = TypeField::encode(INVALID)
+         | CopiedField::encode(false)
+         | SyncedField::encode(false)
++        | NumberInfoField::encode(NumberInfo::kUninitialized)
+         | DataField::encode(0);
+   }
+ 
+@@ -67,15 +75,16 @@ class FrameElement BASE_EMBEDDED {
+   }
+ 
+   // Factory function to construct an in-memory frame element.
+-  static FrameElement MemoryElement() {
+-    FrameElement result(MEMORY, no_reg, SYNCED);
++  static FrameElement MemoryElement(NumberInfo::Type info) {
++    FrameElement result(MEMORY, no_reg, SYNCED, info);
+     return result;
+   }
+ 
+   // Factory function to construct an in-register frame element.
+   static FrameElement RegisterElement(Register reg,
+-                                      SyncFlag is_synced) {
+-    return FrameElement(REGISTER, reg, is_synced);
++                                      SyncFlag is_synced,
++                                      NumberInfo::Type info) {
++    return FrameElement(REGISTER, reg, is_synced, info);
+   }
+ 
+   // Factory function to construct a frame element whose value is known at
+@@ -185,10 +194,14 @@ class FrameElement BASE_EMBEDDED {
+   };
+ 
+   // Used to construct memory and register elements.
+-  FrameElement(Type type, Register reg, SyncFlag is_synced) {
++  FrameElement(Type type,
++               Register reg,
++               SyncFlag is_synced,
++               NumberInfo::Type info) {
+     value_ = TypeField::encode(type)
+         | CopiedField::encode(false)
+         | SyncedField::encode(is_synced != NOT_SYNCED)
++        | NumberInfoField::encode(info)
+         | DataField::encode(reg.code_ > 0 ? reg.code_ : 0);
+   }
+ 
+@@ -197,6 +210,7 @@ class FrameElement BASE_EMBEDDED {
+     value_ = TypeField::encode(CONSTANT)
+         | CopiedField::encode(false)
+         | SyncedField::encode(is_synced != NOT_SYNCED)
++        | NumberInfoField::encode(NumberInfo::kUninitialized)
+         | DataField::encode(ConstantList()->length());
+     ConstantList()->Add(value);
+   }
+@@ -223,9 +237,10 @@ class FrameElement BASE_EMBEDDED {
+   uint32_t value_;
+ 
+   class TypeField: public BitField<Type, 0, 3> {};
+-  class CopiedField: public BitField<uint32_t, 3, 1> {};
+-  class SyncedField: public BitField<uint32_t, 4, 1> {};
+-  class DataField: public BitField<uint32_t, 5, 32 - 6> {};
++  class CopiedField: public BitField<bool, 3, 1> {};
++  class SyncedField: public BitField<bool, 4, 1> {};
++  class NumberInfoField: public BitField<NumberInfo::Type, 5, 3> {};
++  class DataField: public BitField<uint32_t, 8, 32 - 9> {};
+ 
+   friend class VirtualFrame;
+ };
+diff --git a/src/ia32/codegen-ia32.cc b/src/ia32/codegen-ia32.cc
+index 6a9c65a..52899f2 100644
+--- a/src/ia32/codegen-ia32.cc
++++ b/src/ia32/codegen-ia32.cc
+@@ -722,35 +722,54 @@ void CodeGenerator::ToBoolean(ControlDestination* dest) {
+   // The value to convert should be popped from the frame.
+   Result value = frame_->Pop();
+   value.ToRegister();
+-  // Fast case checks.
+ 
+-  // 'false' => false.
+-  __ cmp(value.reg(), Factory::false_value());
+-  dest->false_target()->Branch(equal);
++  if (value.is_number()) {
++    Comment cmnt(masm_, "ONLY_NUMBER");
++    // Fast case if NumberInfo indicates only numbers.
++    if (FLAG_debug_code) {
++      __ AbortIfNotNumber(value.reg(), "ToBoolean operand is not a number.");
++    }
++    // Smi => false iff zero.
++    ASSERT(kSmiTag == 0);
++    __ test(value.reg(), Operand(value.reg()));
++    dest->false_target()->Branch(zero);
++    __ test(value.reg(), Immediate(kSmiTagMask));
++    dest->true_target()->Branch(zero);
++    __ fldz();
++    __ fld_d(FieldOperand(value.reg(), HeapNumber::kValueOffset));
++    __ FCmp();
++    value.Unuse();
++    dest->Split(not_zero);
++  } else {
++    // Fast case checks.
++    // 'false' => false.
++    __ cmp(value.reg(), Factory::false_value());
++    dest->false_target()->Branch(equal);
+ 
+-  // 'true' => true.
+-  __ cmp(value.reg(), Factory::true_value());
+-  dest->true_target()->Branch(equal);
++    // 'true' => true.
++    __ cmp(value.reg(), Factory::true_value());
++    dest->true_target()->Branch(equal);
+ 
+-  // 'undefined' => false.
+-  __ cmp(value.reg(), Factory::undefined_value());
+-  dest->false_target()->Branch(equal);
++    // 'undefined' => false.
++    __ cmp(value.reg(), Factory::undefined_value());
++    dest->false_target()->Branch(equal);
+ 
+-  // Smi => false iff zero.
+-  ASSERT(kSmiTag == 0);
+-  __ test(value.reg(), Operand(value.reg()));
+-  dest->false_target()->Branch(zero);
+-  __ test(value.reg(), Immediate(kSmiTagMask));
+-  dest->true_target()->Branch(zero);
+-
+-  // Call the stub for all other cases.
+-  frame_->Push(&value);  // Undo the Pop() from above.
+-  ToBooleanStub stub;
+-  Result temp = frame_->CallStub(&stub, 1);
+-  // Convert the result to a condition code.
+-  __ test(temp.reg(), Operand(temp.reg()));
+-  temp.Unuse();
+-  dest->Split(not_equal);
++    // Smi => false iff zero.
++    ASSERT(kSmiTag == 0);
++    __ test(value.reg(), Operand(value.reg()));
++    dest->false_target()->Branch(zero);
++    __ test(value.reg(), Immediate(kSmiTagMask));
++    dest->true_target()->Branch(zero);
++
++    // Call the stub for all other cases.
++    frame_->Push(&value);  // Undo the Pop() from above.
++    ToBooleanStub stub;
++    Result temp = frame_->CallStub(&stub, 1);
++    // Convert the result to a condition code.
++    __ test(temp.reg(), Operand(temp.reg()));
++    temp.Unuse();
++    dest->Split(not_equal);
++  }
+ }
+ 
+ 
+@@ -790,6 +809,10 @@ class FloatingPointHelper : public AllStatic {
+   static void LoadAsIntegers(MacroAssembler* masm,
+                              bool use_sse3,
+                              Label* operand_conversion_failure);
++  // Test if operands are smis or heap numbers and load them
++  // into xmm0 and xmm1 if they are. Operands are in edx and eax.
++  // Leaves operands unchanged.
++  static void LoadSSE2Operands(MacroAssembler* masm);
+   // Test if operands are numbers (smi or HeapNumber objects), and load
+   // them into xmm0 and xmm1 if they are.  Jump to label not_numbers if
+   // either operand is not a number.  Operands are in edx and eax.
+@@ -817,12 +840,13 @@ const char* GenericBinaryOpStub::GetName() {
+   }
+ 
+   OS::SNPrintF(Vector<char>(name_, kMaxNameLength),
+-               "GenericBinaryOpStub_%s_%s%s_%s%s",
++               "GenericBinaryOpStub_%s_%s%s_%s%s%s",
+                op_name,
+                overwrite_name,
+                (flags_ & NO_SMI_CODE_IN_STUB) ? "_NoSmiInStub" : "",
+                args_in_registers_ ? "RegArgs" : "StackArgs",
+-               args_reversed_ ? "_R" : "");
++               args_reversed_ ? "_R" : "",
++               only_numbers_in_stub_ ? "_OnlyNumbers" : "");
+   return name_;
+ }
+ 
+@@ -972,27 +996,35 @@ void CodeGenerator::GenericBinaryOperation(Token::Value op,
+     // Neither operand is known to be a string.
+   }
+ 
+-  bool left_is_smi = left.is_constant() && left.handle()->IsSmi();
+-  bool left_is_non_smi = left.is_constant() && !left.handle()->IsSmi();
+-  bool right_is_smi = right.is_constant() && right.handle()->IsSmi();
+-  bool right_is_non_smi = right.is_constant() && !right.handle()->IsSmi();
++  bool left_is_smi_constant = left.is_constant() && left.handle()->IsSmi();
++  bool left_is_non_smi_constant = left.is_constant() && !left.handle()->IsSmi();
++  bool right_is_smi_constant = right.is_constant() && right.handle()->IsSmi();
++  bool right_is_non_smi_constant =
++      right.is_constant() && !right.handle()->IsSmi();
+ 
+-  if (left_is_smi && right_is_smi) {
++  if (left_is_smi_constant && right_is_smi_constant) {
+     // Compute the constant result at compile time, and leave it on the frame.
+     int left_int = Smi::cast(*left.handle())->value();
+     int right_int = Smi::cast(*right.handle())->value();
+     if (FoldConstantSmis(op, left_int, right_int)) return;
+   }
+ 
++  // Get number type of left and right sub-expressions.
++  bool only_numbers = left.is_number() && right.is_number();
++  bool only_smis = left.is_smi() && right.is_smi();
++
+   Result answer;
+-  if (left_is_non_smi || right_is_non_smi) {
++  if (left_is_non_smi_constant || right_is_non_smi_constant) {
+     // Go straight to the slow case, with no smi code.
+-    GenericBinaryOpStub stub(op, overwrite_mode, NO_SMI_CODE_IN_STUB);
++    GenericBinaryOpStub stub(op,
++                             overwrite_mode,
++                             NO_SMI_CODE_IN_STUB,
++                             only_numbers);
+     answer = stub.GenerateCall(masm_, frame_, &left, &right);
+-  } else if (right_is_smi) {
++  } else if (right_is_smi_constant) {
+     answer = ConstantSmiBinaryOperation(op, &left, right.handle(),
+                                         type, false, overwrite_mode);
+-  } else if (left_is_smi) {
++  } else if (left_is_smi_constant) {
+     answer = ConstantSmiBinaryOperation(op, &right, left.handle(),
+                                         type, true, overwrite_mode);
+   } else {
+@@ -1004,10 +1036,49 @@ void CodeGenerator::GenericBinaryOperation(Token::Value op,
+     if (loop_nesting() > 0 && (Token::IsBitOp(op) || type->IsLikelySmi())) {
+       answer = LikelySmiBinaryOperation(op, &left, &right, overwrite_mode);
+     } else {
+-      GenericBinaryOpStub stub(op, overwrite_mode, NO_GENERIC_BINARY_FLAGS);
++      GenericBinaryOpStub stub(op,
++                               overwrite_mode,
++                               NO_GENERIC_BINARY_FLAGS,
++                               only_numbers);
+       answer = stub.GenerateCall(masm_, frame_, &left, &right);
+     }
+   }
++
++  // Set NumberInfo of result according to the operation performed.
++  NumberInfo::Type info = NumberInfo::kUnknown;
++  switch (op) {
++    case Token::COMMA:
++      info = right.number_info();
++    case Token::OR:
++    case Token::AND:
++      // Could be anything. Check inputs.
++      if (only_numbers)
++        info = NumberInfo::kNumber;
++      break;
++    case Token::BIT_OR:
++    case Token::BIT_XOR:
++    case Token::BIT_AND:
++    case Token::SAR:
++    case Token::SHR:
++      info = only_smis ? NumberInfo::kSmi : NumberInfo::kNumber;
++      break;
++    case Token::SHL:
++      info = NumberInfo::kNumber;
++      break;
++    case Token::ADD:
++      // Could be strings or numbers. Check types of inputs.
++      if (only_numbers) info = NumberInfo::kNumber;
++      break;
++    case Token::SUB:
++    case Token::MUL:
++    case Token::DIV:
++    case Token::MOD:
++      info = NumberInfo::kNumber;
++      break;
++    default:
++      UNREACHABLE();
++  }
++  answer.set_number_info(info);
+   frame_->Push(&answer);
+ }
+ 
+@@ -7545,7 +7616,18 @@ void GenericBinaryOpStub::Generate(MacroAssembler* masm) {
+     case Token::DIV: {
+       if (CpuFeatures::IsSupported(SSE2)) {
+         CpuFeatures::Scope use_sse2(SSE2);
+-        FloatingPointHelper::LoadSSE2Operands(masm, &call_runtime);
++        if (only_numbers_in_stub_) {
++          if (FLAG_debug_code) {
++            // Assert at runtime that inputs are only numbers.
++            __ AbortIfNotNumber(edx,
++                                "GenericBinaryOpStub operand not a number.");
++            __ AbortIfNotNumber(eax,
++                                "GenericBinaryOpStub operand not a number.");
++          }
++          FloatingPointHelper::LoadSSE2Operands(masm);
++        } else {
++          FloatingPointHelper::LoadSSE2Operands(masm, &call_runtime);
++        }
+ 
+         switch (op_) {
+           case Token::ADD: __ addsd(xmm0, xmm1); break;
+@@ -7558,7 +7640,17 @@ void GenericBinaryOpStub::Generate(MacroAssembler* masm) {
+         __ movdbl(FieldOperand(eax, HeapNumber::kValueOffset), xmm0);
+         GenerateReturn(masm);
+       } else {  // SSE2 not available, use FPU.
+-        FloatingPointHelper::CheckFloatOperands(masm, &call_runtime, ebx);
++        if (only_numbers_in_stub_) {
++          if (FLAG_debug_code) {
++            // Assert at runtime that inputs are only numbers.
++            __ AbortIfNotNumber(edx,
++                                "GenericBinaryOpStub operand not a number.");
++            __ AbortIfNotNumber(eax,
++                                "GenericBinaryOpStub operand not a number.");
++          }
++        } else {
++          FloatingPointHelper::CheckFloatOperands(masm, &call_runtime, ebx);
++        }
+         FloatingPointHelper::LoadFloatOperands(
+             masm,
+             ecx,
+@@ -8070,6 +8162,35 @@ void FloatingPointHelper::LoadFloatOperand(MacroAssembler* masm,
+ }
+ 
+ 
++void FloatingPointHelper::LoadSSE2Operands(MacroAssembler* masm) {
++  Label load_smi_edx, load_eax, load_smi_eax, done;
++  // Load operand in edx into xmm0.
++  __ test(edx, Immediate(kSmiTagMask));
++  __ j(zero, &load_smi_edx, not_taken);  // Argument in edx is a smi.
++  __ movdbl(xmm0, FieldOperand(edx, HeapNumber::kValueOffset));
++
++  __ bind(&load_eax);
++  // Load operand in eax into xmm1.
++  __ test(eax, Immediate(kSmiTagMask));
++  __ j(zero, &load_smi_eax, not_taken);  // Argument in eax is a smi.
++  __ movdbl(xmm1, FieldOperand(eax, HeapNumber::kValueOffset));
++  __ jmp(&done);
++
++  __ bind(&load_smi_edx);
++  __ SmiUntag(edx);  // Untag smi before converting to float.
++  __ cvtsi2sd(xmm0, Operand(edx));
++  __ SmiTag(edx);  // Retag smi for heap number overwriting test.
++  __ jmp(&load_eax);
++
++  __ bind(&load_smi_eax);
++  __ SmiUntag(eax);  // Untag smi before converting to float.
++  __ cvtsi2sd(xmm1, Operand(eax));
++  __ SmiTag(eax);  // Retag smi for heap number overwriting test.
++
++  __ bind(&done);
++}
++
++
+ void FloatingPointHelper::LoadSSE2Operands(MacroAssembler* masm,
+                                            Label* not_numbers) {
+   Label load_smi_edx, load_eax, load_smi_eax, load_float_eax, done;
+diff --git a/src/ia32/codegen-ia32.h b/src/ia32/codegen-ia32.h
+index 4fdc414..44faea4 100644
+--- a/src/ia32/codegen-ia32.h
++++ b/src/ia32/codegen-ia32.h
+@@ -658,13 +658,15 @@ class GenericBinaryOpStub: public CodeStub {
+  public:
+   GenericBinaryOpStub(Token::Value op,
+                       OverwriteMode mode,
+-                      GenericBinaryFlags flags)
++                      GenericBinaryFlags flags,
++                      bool only_numbers = false)
+       : op_(op),
+         mode_(mode),
+         flags_(flags),
+         args_in_registers_(false),
+         args_reversed_(false),
+-        name_(NULL) {
++        name_(NULL),
++        only_numbers_in_stub_(only_numbers) {
+     use_sse3_ = CpuFeatures::IsSupported(SSE3);
+     ASSERT(OpBits::is_valid(Token::NUM_TOKENS));
+   }
+@@ -689,28 +691,32 @@ class GenericBinaryOpStub: public CodeStub {
+   bool args_reversed_;  // Left and right argument are swapped.
+   bool use_sse3_;
+   char* name_;
++  bool only_numbers_in_stub_;  // Arguments are only numbers.
+ 
+   const char* GetName();
+ 
+ #ifdef DEBUG
+   void Print() {
+-    PrintF("GenericBinaryOpStub (op %s), "
+-           "(mode %d, flags %d, registers %d, reversed %d)\n",
++    PrintF("GenericBinaryOpStub %d (op %s), "
++           "(mode %d, flags %d, registers %d, reversed %d, only_numbers %d)\n",
++           MinorKey(),
+            Token::String(op_),
+            static_cast<int>(mode_),
+            static_cast<int>(flags_),
+            static_cast<int>(args_in_registers_),
+-           static_cast<int>(args_reversed_));
++           static_cast<int>(args_reversed_),
++           static_cast<int>(only_numbers_in_stub_));
+   }
+ #endif
+ 
+-  // Minor key encoding in 16 bits FRASOOOOOOOOOOMM.
++  // Minor key encoding in 16 bits NFRASOOOOOOOOOMM.
+   class ModeBits: public BitField<OverwriteMode, 0, 2> {};
+-  class OpBits: public BitField<Token::Value, 2, 10> {};
+-  class SSE3Bits: public BitField<bool, 12, 1> {};
+-  class ArgsInRegistersBits: public BitField<bool, 13, 1> {};
+-  class ArgsReversedBits: public BitField<bool, 14, 1> {};
+-  class FlagBits: public BitField<GenericBinaryFlags, 15, 1> {};
++  class OpBits: public BitField<Token::Value, 2, 9> {};
++  class SSE3Bits: public BitField<bool, 11, 1> {};
++  class ArgsInRegistersBits: public BitField<bool, 12, 1> {};
++  class ArgsReversedBits: public BitField<bool, 13, 1> {};
++  class FlagBits: public BitField<GenericBinaryFlags, 14, 1> {};
++  class OnlyNumbersBits: public BitField<bool, 15, 1> {};
+ 
+   Major MajorKey() { return GenericBinaryOp; }
+   int MinorKey() {
+@@ -720,7 +726,8 @@ class GenericBinaryOpStub: public CodeStub {
+            | FlagBits::encode(flags_)
+            | SSE3Bits::encode(use_sse3_)
+            | ArgsInRegistersBits::encode(args_in_registers_)
+-           | ArgsReversedBits::encode(args_reversed_);
++           | ArgsReversedBits::encode(args_reversed_)
++           | OnlyNumbersBits::encode(only_numbers_in_stub_);
+   }
+ 
+   void Generate(MacroAssembler* masm);
+diff --git a/src/ia32/macro-assembler-ia32.cc b/src/ia32/macro-assembler-ia32.cc
+index 7cd1ee4..5ae3fe2 100644
+--- a/src/ia32/macro-assembler-ia32.cc
++++ b/src/ia32/macro-assembler-ia32.cc
+@@ -383,6 +383,17 @@ void MacroAssembler::FCmp() {
+ }
+ 
+ 
++void MacroAssembler::AbortIfNotNumber(Register object, const char* msg) {
++  Label ok;
++  test(object, Immediate(kSmiTagMask));
++  j(zero, &ok);
++  cmp(FieldOperand(object, HeapObject::kMapOffset),
++      Factory::heap_number_map());
++  Assert(equal, msg);
++  bind(&ok);
++}
++
++
+ void MacroAssembler::EnterFrame(StackFrame::Type type) {
+   push(ebp);
+   mov(ebp, Operand(esp));
+diff --git a/src/ia32/macro-assembler-ia32.h b/src/ia32/macro-assembler-ia32.h
+index 574e3b8..69dc54c 100644
+--- a/src/ia32/macro-assembler-ia32.h
++++ b/src/ia32/macro-assembler-ia32.h
+@@ -176,6 +176,9 @@ class MacroAssembler: public Assembler {
+     sar(reg, kSmiTagSize);
+   }
+ 
++  // Abort execution if argument is not a number. Used in debug code.
++  void AbortIfNotNumber(Register object, const char* msg);
++
+   // ---------------------------------------------------------------------------
+   // Exception handling
+ 
+diff --git a/src/ia32/virtual-frame-ia32.cc b/src/ia32/virtual-frame-ia32.cc
+index 4e1341b..ae0f7de 100644
+--- a/src/ia32/virtual-frame-ia32.cc
++++ b/src/ia32/virtual-frame-ia32.cc
+@@ -45,7 +45,7 @@ VirtualFrame::VirtualFrame()
+     : elements_(parameter_count() + local_count() + kPreallocatedElements),
+       stack_pointer_(parameter_count() + 1) {  // 0-based index of TOS.
+   for (int i = 0; i <= stack_pointer_; i++) {
+-    elements_.Add(FrameElement::MemoryElement());
++    elements_.Add(FrameElement::MemoryElement(NumberInfo::kUnknown));
+   }
+   for (int i = 0; i < RegisterAllocator::kNumRegisters; i++) {
+     register_locations_[i] = kIllegalIndex;
+@@ -173,10 +173,12 @@ void VirtualFrame::MakeMergable() {
+   for (int i = 0; i < element_count(); i++) {
+     FrameElement element = elements_[i];
+ 
++    // All number type information is reset to unknown for a mergable frame
++    // because of incoming back edges.
+     if (element.is_constant() || element.is_copy()) {
+       if (element.is_synced()) {
+         // Just spill.
+-        elements_[i] = FrameElement::MemoryElement();
++        elements_[i] = FrameElement::MemoryElement(NumberInfo::kUnknown);
+       } else {
+         // Allocate to a register.
+         FrameElement backing_element;  // Invalid if not a copy.
+@@ -187,7 +189,8 @@ void VirtualFrame::MakeMergable() {
+         ASSERT(fresh.is_valid());  // A register was spilled if all were in use.
+         elements_[i] =
+             FrameElement::RegisterElement(fresh.reg(),
+-                                          FrameElement::NOT_SYNCED);
++                                          FrameElement::NOT_SYNCED,
++                                          NumberInfo::kUnknown);
+         Use(fresh.reg(), i);
+ 
+         // Emit a move.
+@@ -220,6 +223,7 @@ void VirtualFrame::MakeMergable() {
+       // The copy flag is not relied on before the end of this loop,
+       // including when registers are spilled.
+       elements_[i].clear_copied();
++      elements_[i].set_number_info(NumberInfo::kUnknown);
+     }
+   }
+ }
+@@ -607,10 +611,14 @@ int VirtualFrame::InvalidateFrameSlotAt(int index) {
+   // Set the new backing element.
+   if (elements_[new_backing_index].is_synced()) {
+     elements_[new_backing_index] =
+-        FrameElement::RegisterElement(backing_reg, FrameElement::SYNCED);
++        FrameElement::RegisterElement(backing_reg,
++                                      FrameElement::SYNCED,
++                                      original.number_info());
+   } else {
+     elements_[new_backing_index] =
+-        FrameElement::RegisterElement(backing_reg, FrameElement::NOT_SYNCED);
++        FrameElement::RegisterElement(backing_reg,
++                                      FrameElement::NOT_SYNCED,
++                                      original.number_info());
+   }
+   // Update the other copies.
+   for (int i = new_backing_index + 1; i < element_count(); i++) {
+@@ -641,7 +649,8 @@ void VirtualFrame::TakeFrameSlotAt(int index) {
+       ASSERT(fresh.is_valid());
+       FrameElement new_element =
+           FrameElement::RegisterElement(fresh.reg(),
+-                                        FrameElement::NOT_SYNCED);
++                                        FrameElement::NOT_SYNCED,
++                                        original.number_info());
+       Use(fresh.reg(), element_count());
+       elements_.Add(new_element);
+       __ mov(fresh.reg(), Operand(ebp, fp_relative(index)));
+@@ -1051,6 +1060,14 @@ Result VirtualFrame::Pop() {
+   int index = element_count();
+   ASSERT(element.is_valid());
+ 
++  // Get number type information of the result.
++  NumberInfo::Type info;
++  if (!element.is_copy()) {
++    info = element.number_info();
++  } else {
++    info = elements_[element.index()].number_info();
++  }
++
+   bool pop_needed = (stack_pointer_ == index);
+   if (pop_needed) {
+     stack_pointer_--;
+@@ -1058,6 +1075,7 @@ Result VirtualFrame::Pop() {
+       Result temp = cgen()->allocator()->Allocate();
+       ASSERT(temp.is_valid());
+       __ pop(temp.reg());
++      temp.set_number_info(info);
+       return temp;
+     }
+ 
+@@ -1085,14 +1103,16 @@ Result VirtualFrame::Pop() {
+     ASSERT(temp.is_valid());
+     Use(temp.reg(), index);
+     FrameElement new_element =
+-        FrameElement::RegisterElement(temp.reg(), FrameElement::SYNCED);
++        FrameElement::RegisterElement(temp.reg(),
++                                      FrameElement::SYNCED,
++                                      element.number_info());
+     // Preserve the copy flag on the element.
+     if (element.is_copied()) new_element.set_copied();
+     elements_[index] = new_element;
+     __ mov(temp.reg(), Operand(ebp, fp_relative(index)));
+-    return Result(temp.reg());
++    return Result(temp.reg(), info);
+   } else if (element.is_register()) {
+-    return Result(element.reg());
++    return Result(element.reg(), info);
+   } else {
+     ASSERT(element.is_constant());
+     return Result(element.handle());
+@@ -1116,25 +1136,25 @@ void VirtualFrame::EmitPop(Operand operand) {
+ }
+ 
+ 
+-void VirtualFrame::EmitPush(Register reg) {
++void VirtualFrame::EmitPush(Register reg, NumberInfo::Type info) {
+   ASSERT(stack_pointer_ == element_count() - 1);
+-  elements_.Add(FrameElement::MemoryElement());
++  elements_.Add(FrameElement::MemoryElement(info));
+   stack_pointer_++;
+   __ push(reg);
+ }
+ 
+ 
+-void VirtualFrame::EmitPush(Operand operand) {
++void VirtualFrame::EmitPush(Operand operand, NumberInfo::Type info) {
+   ASSERT(stack_pointer_ == element_count() - 1);
+-  elements_.Add(FrameElement::MemoryElement());
++  elements_.Add(FrameElement::MemoryElement(info));
+   stack_pointer_++;
+   __ push(operand);
+ }
+ 
+ 
+-void VirtualFrame::EmitPush(Immediate immediate) {
++void VirtualFrame::EmitPush(Immediate immediate, NumberInfo::Type info) {
+   ASSERT(stack_pointer_ == element_count() - 1);
+-  elements_.Add(FrameElement::MemoryElement());
++  elements_.Add(FrameElement::MemoryElement(info));
+   stack_pointer_++;
+   __ push(immediate);
+ }
+diff --git a/src/ia32/virtual-frame-ia32.h b/src/ia32/virtual-frame-ia32.h
+index 4d55c9a..b078ba0 100644
+--- a/src/ia32/virtual-frame-ia32.h
++++ b/src/ia32/virtual-frame-ia32.h
+@@ -28,6 +28,7 @@
+ #ifndef V8_IA32_VIRTUAL_FRAME_IA32_H_
+ #define V8_IA32_VIRTUAL_FRAME_IA32_H_
+ 
++#include "number-info.h"
+ #include "register-allocator.h"
+ #include "scopes.h"
+ 
+@@ -82,7 +83,8 @@ class VirtualFrame: public ZoneObject {
+   MacroAssembler* masm() { return cgen()->masm(); }
+ 
+   // Create a duplicate of an existing valid frame element.
+-  FrameElement CopyElementAt(int index);
++  FrameElement CopyElementAt(int index,
++    NumberInfo::Type info = NumberInfo::kUninitialized);
+ 
+   // The number of elements on the virtual frame.
+   int element_count() { return elements_.length(); }
+@@ -385,12 +387,15 @@ class VirtualFrame: public ZoneObject {
+ 
+   // Push an element on top of the expression stack and emit a
+   // corresponding push instruction.
+-  void EmitPush(Register reg);
+-  void EmitPush(Operand operand);
+-  void EmitPush(Immediate immediate);
++  void EmitPush(Register reg,
++                NumberInfo::Type info = NumberInfo::kUnknown);
++  void EmitPush(Operand operand,
++                NumberInfo::Type info = NumberInfo::kUnknown);
++  void EmitPush(Immediate immediate,
++                NumberInfo::Type info = NumberInfo::kUnknown);
+ 
+   // Push an element on the virtual frame.
+-  void Push(Register reg);
++  void Push(Register reg, NumberInfo::Type info = NumberInfo::kUnknown);
+   void Push(Handle<Object> value);
+   void Push(Smi* value) {
+     Push(Handle<Object> (value));
+@@ -402,7 +407,7 @@ class VirtualFrame: public ZoneObject {
+     // This assert will trigger if you try to push the same value twice.
+     ASSERT(result->is_valid());
+     if (result->is_register()) {
+-      Push(result->reg());
++      Push(result->reg(), result->number_info());
+     } else {
+       ASSERT(result->is_constant());
+       Push(result->handle());
+diff --git a/src/jump-target-inl.h b/src/jump-target-inl.h
+index 1f0676d..dcd615e 100644
+--- a/src/jump-target-inl.h
++++ b/src/jump-target-inl.h
+@@ -42,6 +42,9 @@ void JumpTarget::InitializeEntryElement(int index, FrameElement* target) {
+   } else if (target->is_copy()) {
+     entry_frame_->elements_[target->index()].set_copied();
+   }
++  if (direction_ == BIDIRECTIONAL) {
++    entry_frame_->elements_[index].set_number_info(NumberInfo::kUnknown);
++  }
+ }
+ 
+ } }  // namespace v8::internal
+diff --git a/src/jump-target.cc b/src/jump-target.cc
+index 3782f92..66764e6 100644
+--- a/src/jump-target.cc
++++ b/src/jump-target.cc
+@@ -101,6 +101,17 @@ void JumpTarget::ComputeEntryFrame() {
+         if (element == NULL || !element->is_valid()) break;
+ 
+         element = element->Combine(&reaching_frames_[j]->elements_[i]);
++
++        FrameElement* other = &reaching_frames_[j]->elements_[i];
++        if (element != NULL && !element->is_copy()) {
++          ASSERT(other != NULL);
++          ASSERT(!other->is_copy());
++          // We overwrite the number information of one of the incoming frames.
++          // This is safe because we only use the frame for emitting merge code.
++          // The number information of incoming frames is not used anymore.
++          element->set_number_info(NumberInfo::Combine(element->number_info(),
++                                                       other->number_info()));
++        }
+       }
+       elements[i] = element;
+     }
+@@ -117,6 +128,7 @@ void JumpTarget::ComputeEntryFrame() {
+     // elements as copied exactly when they have a copy.  Undetermined
+     // elements are initially recorded as if in memory.
+     if (target != NULL) {
++      ASSERT(!target->is_copy());  // These initial elements are never copies.
+       entry_frame_->elements_[index] = *target;
+       InitializeEntryElement(index, target);
+     }
+@@ -125,7 +137,8 @@ void JumpTarget::ComputeEntryFrame() {
+   for (; index < length; index++) {
+     FrameElement* target = elements[index];
+     if (target == NULL) {
+-      entry_frame_->elements_.Add(FrameElement::MemoryElement());
++      entry_frame_->elements_.Add(
++          FrameElement::MemoryElement(NumberInfo::kUninitialized));
+     } else {
+       entry_frame_->elements_.Add(*target);
+       InitializeEntryElement(index, target);
+@@ -142,9 +155,20 @@ void JumpTarget::ComputeEntryFrame() {
+       RegisterFile candidate_registers;
+       int best_count = kMinInt;
+       int best_reg_num = RegisterAllocator::kInvalidRegister;
++      NumberInfo::Type info = NumberInfo::kUninitialized;
+ 
+       for (int j = 0; j < reaching_frames_.length(); j++) {
+         FrameElement element = reaching_frames_[j]->elements_[i];
++        if (direction_ == BIDIRECTIONAL) {
++            info = NumberInfo::kUnknown;
++        } else if (!element.is_copy()) {
++          info = NumberInfo::Combine(info, element.number_info());
++        } else {
++          // New elements will not be copies, so get number information from
++          // backing element in the reaching frame.
++          info = NumberInfo::Combine(info,
++            reaching_frames_[j]->elements_[element.index()].number_info());
++        }
+         is_synced = is_synced && element.is_synced();
+         if (element.is_register() && !entry_frame_->is_used(element.reg())) {
+           // Count the register occurrence and remember it if better
+@@ -158,11 +182,17 @@ void JumpTarget::ComputeEntryFrame() {
+         }
+       }
+ 
++      // We must have a number type information now (not for copied elements).
++      ASSERT(entry_frame_->elements_[i].is_copy()
++             || info != NumberInfo::kUninitialized);
++
+       // If the value is synced on all frames, put it in memory.  This
+       // costs nothing at the merge code but will incur a
+       // memory-to-register move when the value is needed later.
+       if (is_synced) {
+         // Already recorded as a memory element.
++        // Set combined number info.
++        entry_frame_->elements_[i].set_number_info(info);
+         continue;
+       }
+ 
+@@ -183,13 +213,27 @@ void JumpTarget::ComputeEntryFrame() {
+         bool is_copied = entry_frame_->elements_[i].is_copied();
+         Register reg = RegisterAllocator::ToRegister(best_reg_num);
+         entry_frame_->elements_[i] =
+-            FrameElement::RegisterElement(reg,
+-                                          FrameElement::NOT_SYNCED);
++            FrameElement::RegisterElement(reg, FrameElement::NOT_SYNCED,
++                                          NumberInfo::kUninitialized);
+         if (is_copied) entry_frame_->elements_[i].set_copied();
+         entry_frame_->set_register_location(reg, i);
+       }
++      // Set combined number info.
++      entry_frame_->elements_[i].set_number_info(info);
++    }
++  }
++
++  // If we have incoming backward edges assert we forget all number information.
++#ifdef DEBUG
++  if (direction_ == BIDIRECTIONAL) {
++    for (int i = 0; i < length; ++i) {
++      if (!entry_frame_->elements_[i].is_copy()) {
++        ASSERT(entry_frame_->elements_[i].number_info() ==
++               NumberInfo::kUnknown);
++      }
+     }
+   }
++#endif
+ 
+   // The stack pointer is at the highest synced element or the base of
+   // the expression stack.
+diff --git a/src/number-info.h b/src/number-info.h
+new file mode 100644
+index 0000000..ae873a3
+--- /dev/null
++++ b/src/number-info.h
+@@ -0,0 +1,53 @@
++// Copyright 2010 the V8 project authors. All rights reserved.
++// Redistribution and use in source and binary forms, with or without
++// modification, are permitted provided that the following conditions are
++// met:
++//
++//     * Redistributions of source code must retain the above copyright
++//       notice, this list of conditions and the following disclaimer.
++//     * Redistributions in binary form must reproduce the above
++//       copyright notice, this list of conditions and the following
++//       disclaimer in the documentation and/or other materials provided
++//       with the distribution.
++//     * Neither the name of Google Inc. nor the names of its
++//       contributors may be used to endorse or promote products derived
++//       from this software without specific prior written permission.
++//
++// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
++// "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
++// LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
++// A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
++// OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
++// SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
++// LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
++// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
++// THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
++// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
++// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++
++#ifndef V8_NUMBER_INFO_H_
++#define V8_NUMBER_INFO_H_
++
++namespace v8 {
++namespace internal {
++
++class NumberInfo : public AllStatic {
++ public:
++  enum Type {
++    kUnknown = 0,
++    kNumber = 1,
++    kSmi = 3,
++    kHeapNumber = 5,
++    kUninitialized = 7
++  };
++
++  // Return the weakest (least precise) common type.
++  static Type Combine(Type a, Type b) {
++    // Make use of the order of enum values.
++    return static_cast<Type>(a & b);
++  }
++};
++
++} }  // namespace v8::internal
++
++#endif  // V8_NUMBER_INFO_H_
+diff --git a/src/register-allocator.cc b/src/register-allocator.cc
+index d55f949..349cc24 100644
+--- a/src/register-allocator.cc
++++ b/src/register-allocator.cc
+@@ -37,10 +37,12 @@ namespace internal {
+ // Result implementation.
+ 
+ 
+-Result::Result(Register reg) {
++Result::Result(Register reg, NumberInfo::Type info) {
+   ASSERT(reg.is_valid() && !RegisterAllocator::IsReserved(reg));
+   CodeGeneratorScope::Current()->allocator()->Use(reg);
+-  value_ = TypeField::encode(REGISTER) | DataField::encode(reg.code_);
++  value_ = TypeField::encode(REGISTER)
++      | NumberInfoField::encode(info)
++      | DataField::encode(reg.code_);
+ }
+ 
+ 
+@@ -50,6 +52,23 @@ Result::ZoneObjectList* Result::ConstantList() {
+ }
+ 
+ 
++NumberInfo::Type Result::number_info() {
++  ASSERT(is_valid());
++  if (!is_constant()) return NumberInfoField::decode(value_);
++  Handle<Object> value = handle();
++  if (value->IsSmi()) return NumberInfo::kSmi;
++  if (value->IsHeapNumber()) return NumberInfo::kHeapNumber;
++  return NumberInfo::kUnknown;
++}
++
++
++void Result::set_number_info(NumberInfo::Type info) {
++  ASSERT(is_valid());
++  value_ = value_ & ~NumberInfoField::mask();
++  value_ = value_ | NumberInfoField::encode(info);
++}
++
++
+ // -------------------------------------------------------------------------
+ // RegisterAllocator implementation.
+ 
+diff --git a/src/register-allocator.h b/src/register-allocator.h
+index 9f01322..4ec0bb4 100644
+--- a/src/register-allocator.h
++++ b/src/register-allocator.h
+@@ -29,6 +29,7 @@
+ #define V8_REGISTER_ALLOCATOR_H_
+ 
+ #include "macro-assembler.h"
++#include "number-info.h"
+ 
+ #if V8_TARGET_ARCH_IA32
+ #include "ia32/register-allocator-ia32.h"
+@@ -64,11 +65,12 @@ class Result BASE_EMBEDDED {
+   Result() { invalidate(); }
+ 
+   // Construct a register Result.
+-  explicit Result(Register reg);
++  explicit Result(Register reg, NumberInfo::Type info = NumberInfo::kUnknown);
+ 
+   // Construct a Result whose value is a compile-time constant.
+   explicit Result(Handle<Object> value) {
+     value_ = TypeField::encode(CONSTANT)
++        | NumberInfoField::encode(NumberInfo::kUninitialized)
+         | DataField::encode(ConstantList()->length());
+     ConstantList()->Add(value);
+   }
+@@ -99,6 +101,14 @@ class Result BASE_EMBEDDED {
+ 
+   void invalidate() { value_ = TypeField::encode(INVALID); }
+ 
++  NumberInfo::Type number_info();
++  void set_number_info(NumberInfo::Type info);
++  bool is_number() {
++    return (number_info() & NumberInfo::kNumber) != 0;
++  }
++  bool is_smi() { return number_info() == NumberInfo::kSmi; }
++  bool is_heap_number() { return number_info() == NumberInfo::kHeapNumber; }
++
+   bool is_valid() const { return type() != INVALID; }
+   bool is_register() const { return type() == REGISTER; }
+   bool is_constant() const { return type() == CONSTANT; }
+@@ -130,7 +140,8 @@ class Result BASE_EMBEDDED {
+   uint32_t value_;
+ 
+   class TypeField: public BitField<Type, 0, 2> {};
+-  class DataField: public BitField<uint32_t, 2, 32 - 3> {};
++  class NumberInfoField : public BitField<NumberInfo::Type, 2, 3> {};
++  class DataField: public BitField<uint32_t, 5, 32 - 6> {};
+ 
+   inline void CopyTo(Result* destination) const;
+ 
+diff --git a/src/virtual-frame.cc b/src/virtual-frame.cc
+index 44e5fae..3624e25 100644
+--- a/src/virtual-frame.cc
++++ b/src/virtual-frame.cc
+@@ -48,7 +48,13 @@ VirtualFrame::VirtualFrame(VirtualFrame* original)
+ }
+ 
+ 
+-FrameElement VirtualFrame::CopyElementAt(int index) {
++// Create a duplicate of an existing valid frame element.
++// We can pass an optional number type information that will override the
++// existing information about the backing element. The new information must
++// not conflict with the existing type information and must be equally or
++// more precise. The default parameter value kUninitialized means that there
++// is no additional information.
++FrameElement VirtualFrame::CopyElementAt(int index, NumberInfo::Type info) {
+   ASSERT(index >= 0);
+   ASSERT(index < element_count());
+ 
+@@ -71,15 +77,26 @@ FrameElement VirtualFrame::CopyElementAt(int index) {
+       // Fall through.
+ 
+     case FrameElement::MEMORY:  // Fall through.
+-    case FrameElement::REGISTER:
++    case FrameElement::REGISTER: {
+       // All copies are backed by memory or register locations.
+       result.set_type(FrameElement::COPY);
+       result.clear_copied();
+       result.clear_sync();
+       result.set_index(index);
+       elements_[index].set_copied();
++      // Update backing element's number information.
++      NumberInfo::Type existing = elements_[index].number_info();
++      ASSERT(existing != NumberInfo::kUninitialized);
++      // Assert that the new type information (a) does not conflict with the
++      // existing one and (b) is equally or more precise.
++      ASSERT((info == NumberInfo::kUninitialized) ||
++             (existing | info) != NumberInfo::kUninitialized);
++      ASSERT(existing <= info);
++      elements_[index].set_number_info(info != NumberInfo::kUninitialized
++                                       ? info
++                                       : existing);
+       break;
+-
++    }
+     case FrameElement::INVALID:
+       // We should not try to copy invalid elements.
+       UNREACHABLE();
+@@ -98,7 +115,7 @@ void VirtualFrame::Adjust(int count) {
+   ASSERT(stack_pointer_ == element_count() - 1);
+ 
+   for (int i = 0; i < count; i++) {
+-    elements_.Add(FrameElement::MemoryElement());
++    elements_.Add(FrameElement::MemoryElement(NumberInfo::kUnknown));
+   }
+   stack_pointer_ += count;
+ }
+@@ -144,8 +161,16 @@ void VirtualFrame::SpillElementAt(int index) {
+   if (!elements_[index].is_valid()) return;
+ 
+   SyncElementAt(index);
++  // Number type information is preserved.
++  // Copies get their number information from their backing element.
++  NumberInfo::Type info;
++  if (!elements_[index].is_copy()) {
++    info = elements_[index].number_info();
++  } else {
++    info = elements_[elements_[index].index()].number_info();
++  }
+   // The element is now in memory.  Its copied flag is preserved.
+-  FrameElement new_element = FrameElement::MemoryElement();
++  FrameElement new_element = FrameElement::MemoryElement(info);
+   if (elements_[index].is_copied()) {
+     new_element.set_copied();
+   }
+@@ -268,7 +293,6 @@ void VirtualFrame::SetElementAt(int index, Result* value) {
+ 
+   InvalidateFrameSlotAt(frame_index);
+ 
+-  FrameElement new_element;
+   if (value->is_register()) {
+     if (is_used(value->reg())) {
+       // The register already appears on the frame.  Either the existing
+@@ -301,7 +325,8 @@ void VirtualFrame::SetElementAt(int index, Result* value) {
+       Use(value->reg(), frame_index);
+       elements_[frame_index] =
+           FrameElement::RegisterElement(value->reg(),
+-                                        FrameElement::NOT_SYNCED);
++                                        FrameElement::NOT_SYNCED,
++                                        value->number_info());
+     }
+   } else {
+     ASSERT(value->is_constant());
+@@ -318,16 +343,15 @@ void VirtualFrame::PushFrameSlotAt(int index) {
+ }
+ 
+ 
+-void VirtualFrame::Push(Register reg) {
++void VirtualFrame::Push(Register reg, NumberInfo::Type info) {
+   if (is_used(reg)) {
+     int index = register_location(reg);
+-    FrameElement element = CopyElementAt(index);
++    FrameElement element = CopyElementAt(index, info);
+     elements_.Add(element);
+   } else {
+     Use(reg, element_count());
+     FrameElement element =
+-        FrameElement::RegisterElement(reg,
+-                                      FrameElement::NOT_SYNCED);
++        FrameElement::RegisterElement(reg, FrameElement::NOT_SYNCED, info);
+     elements_.Add(element);
+   }
+ }
+diff --git a/src/x64/codegen-x64.cc b/src/x64/codegen-x64.cc
+index 3002452..253c82e 100644
+--- a/src/x64/codegen-x64.cc
++++ b/src/x64/codegen-x64.cc
+@@ -4261,34 +4261,52 @@ void CodeGenerator::ToBoolean(ControlDestination* dest) {
+   // The value to convert should be popped from the frame.
+   Result value = frame_->Pop();
+   value.ToRegister();
+-  // Fast case checks.
+ 
+-  // 'false' => false.
+-  __ CompareRoot(value.reg(), Heap::kFalseValueRootIndex);
+-  dest->false_target()->Branch(equal);
++  if (value.is_number()) {
++    Comment cmnt(masm_, "ONLY_NUMBER");
++    // Fast case if NumberInfo indicates only numbers.
++    if (FLAG_debug_code) {
++      __ AbortIfNotNumber(value.reg(), "ToBoolean operand is not a number.");
++    }
++    // Smi => false iff zero.
++    __ SmiCompare(value.reg(), Smi::FromInt(0));
++    dest->false_target()->Branch(equal);
++    Condition is_smi = masm_->CheckSmi(value.reg());
++    dest->true_target()->Branch(is_smi);
++    __ fldz();
++    __ fld_d(FieldOperand(value.reg(), HeapNumber::kValueOffset));
++    __ FCmp();
++    value.Unuse();
++    dest->Split(not_zero);
++  } else {
++    // Fast case checks.
++    // 'false' => false.
++    __ CompareRoot(value.reg(), Heap::kFalseValueRootIndex);
++    dest->false_target()->Branch(equal);
+ 
+-  // 'true' => true.
+-  __ CompareRoot(value.reg(), Heap::kTrueValueRootIndex);
+-  dest->true_target()->Branch(equal);
++    // 'true' => true.
++    __ CompareRoot(value.reg(), Heap::kTrueValueRootIndex);
++    dest->true_target()->Branch(equal);
+ 
+-  // 'undefined' => false.
+-  __ CompareRoot(value.reg(), Heap::kUndefinedValueRootIndex);
+-  dest->false_target()->Branch(equal);
++    // 'undefined' => false.
++    __ CompareRoot(value.reg(), Heap::kUndefinedValueRootIndex);
++    dest->false_target()->Branch(equal);
+ 
+-  // Smi => false iff zero.
+-  __ SmiCompare(value.reg(), Smi::FromInt(0));
+-  dest->false_target()->Branch(equal);
+-  Condition is_smi = masm_->CheckSmi(value.reg());
+-  dest->true_target()->Branch(is_smi);
++    // Smi => false iff zero.
++    __ SmiCompare(value.reg(), Smi::FromInt(0));
++    dest->false_target()->Branch(equal);
++    Condition is_smi = masm_->CheckSmi(value.reg());
++    dest->true_target()->Branch(is_smi);
+ 
+-  // Call the stub for all other cases.
+-  frame_->Push(&value);  // Undo the Pop() from above.
+-  ToBooleanStub stub;
+-  Result temp = frame_->CallStub(&stub, 1);
+-  // Convert the result to a condition code.
+-  __ testq(temp.reg(), temp.reg());
+-  temp.Unuse();
+-  dest->Split(not_equal);
++    // Call the stub for all other cases.
++    frame_->Push(&value);  // Undo the Pop() from above.
++    ToBooleanStub stub;
++    Result temp = frame_->CallStub(&stub, 1);
++    // Convert the result to a condition code.
++    __ testq(temp.reg(), temp.reg());
++    temp.Unuse();
++    dest->Split(not_equal);
++  }
+ }
+ 
+ 
+@@ -5155,26 +5173,34 @@ void CodeGenerator::GenericBinaryOperation(Token::Value op,
+     // Neither operand is known to be a string.
+   }
+ 
+-  bool left_is_smi = left.is_constant() && left.handle()->IsSmi();
+-  bool left_is_non_smi = left.is_constant() && !left.handle()->IsSmi();
+-  bool right_is_smi = right.is_constant() && right.handle()->IsSmi();
+-  bool right_is_non_smi = right.is_constant() && !right.handle()->IsSmi();
++  bool left_is_smi_constant = left.is_constant() && left.handle()->IsSmi();
++  bool left_is_non_smi_constant = left.is_constant() && !left.handle()->IsSmi();
++  bool right_is_smi_constant = right.is_constant() && right.handle()->IsSmi();
++  bool right_is_non_smi_constant =
++      right.is_constant() && !right.handle()->IsSmi();
+ 
+-  if (left_is_smi && right_is_smi) {
++  if (left_is_smi_constant && right_is_smi_constant) {
+     // Compute the constant result at compile time, and leave it on the frame.
+     int left_int = Smi::cast(*left.handle())->value();
+     int right_int = Smi::cast(*right.handle())->value();
+     if (FoldConstantSmis(op, left_int, right_int)) return;
+   }
+ 
++  // Get number type of left and right sub-expressions.
++  bool only_numbers = left.is_number() && right.is_number();
++  bool only_smis = left.is_smi() && right.is_smi();
++
+   Result answer;
+-  if (left_is_non_smi || right_is_non_smi) {
+-    GenericBinaryOpStub stub(op, overwrite_mode, NO_SMI_CODE_IN_STUB);
++  if (left_is_non_smi_constant || right_is_non_smi_constant) {
++    GenericBinaryOpStub stub(op,
++                             overwrite_mode,
++                             NO_SMI_CODE_IN_STUB,
++                             only_numbers);
+     answer = stub.GenerateCall(masm_, frame_, &left, &right);
+-  } else if (right_is_smi) {
++  } else if (right_is_smi_constant) {
+     answer = ConstantSmiBinaryOperation(op, &left, right.handle(),
+                                         type, false, overwrite_mode);
+-  } else if (left_is_smi) {
++  } else if (left_is_smi_constant) {
+     answer = ConstantSmiBinaryOperation(op, &right, left.handle(),
+                                         type, true, overwrite_mode);
+   } else {
+@@ -5186,10 +5212,53 @@ void CodeGenerator::GenericBinaryOperation(Token::Value op,
+     if (loop_nesting() > 0 && (Token::IsBitOp(op) || type->IsLikelySmi())) {
+       answer = LikelySmiBinaryOperation(op, &left, &right, overwrite_mode);
+     } else {
+-      GenericBinaryOpStub stub(op, overwrite_mode, NO_GENERIC_BINARY_FLAGS);
++      GenericBinaryOpStub stub(op,
++                               overwrite_mode,
++                               NO_GENERIC_BINARY_FLAGS,
++                               only_numbers);
+       answer = stub.GenerateCall(masm_, frame_, &left, &right);
+     }
+   }
++
++  // Set NumberInfo of result according to the operation performed.
++  NumberInfo::Type info = NumberInfo::kUnknown;
++  switch (op) {
++    case Token::COMMA:
++      info = right.number_info();
++      break;
++    case Token::OR:
++    case Token::AND:
++      // Could be anything. Check inputs.
++      if (only_numbers)
++        info = NumberInfo::kNumber;
++      break;
++    case Token::BIT_OR:
++    case Token::BIT_XOR:
++    case Token::BIT_AND:
++    case Token::SAR:
++    case Token::SHR:
++      // TODO(fsc): Make use of the fact that smis are 32 bits on x64.
++      info = only_smis ? NumberInfo::kSmi : NumberInfo::kNumber;
++      break;
++    case Token::SHL:
++      info = NumberInfo::kNumber;
++      break;
++    case Token::ADD:
++      // Could be strings or numbers. Check types of inputs.
++      if (only_numbers) {
++        info = NumberInfo::kNumber;
++      }
++      break;
++    case Token::SUB:
++    case Token::MUL:
++    case Token::DIV:
++    case Token::MOD:
++      info = NumberInfo::kNumber;
++      break;
++    default:
++      UNREACHABLE();
++  }
++  answer.set_number_info(info);
+   frame_->Push(&answer);
+ }
+ 
+@@ -8078,13 +8147,14 @@ const char* GenericBinaryOpStub::GetName() {
+   }
+ 
+   OS::SNPrintF(Vector<char>(name_, len),
+-               "GenericBinaryOpStub_%s_%s%s_%s%s_%s",
++               "GenericBinaryOpStub_%s_%s%s_%s%s_%s%s",
+                op_name,
+                overwrite_name,
+                (flags_ & NO_SMI_CODE_IN_STUB) ? "_NoSmiInStub" : "",
+                args_in_registers_ ? "RegArgs" : "StackArgs",
+                args_reversed_ ? "_R" : "",
+-               use_sse3_ ? "SSE3" : "SSE2");
++               use_sse3_ ? "SSE3" : "SSE2",
++               only_numbers_in_stub_ ? "_OnlyNumbers" : "");
+   return name_;
+ }
+ 
+@@ -8408,7 +8478,15 @@ void GenericBinaryOpStub::Generate(MacroAssembler* masm) {
+     case Token::DIV: {
+       // rax: y
+       // rdx: x
+-      FloatingPointHelper::CheckNumberOperands(masm, &call_runtime);
++      if (only_numbers_in_stub_) {
++        if (FLAG_debug_code) {
++          // Assert at runtime that inputs are only numbers.
++          __ AbortIfNotNumber(rdx, "GenericBinaryOpStub operand not a number.");
++          __ AbortIfNotNumber(rax, "GenericBinaryOpStub operand not a number.");
++        }
++      } else {
++        FloatingPointHelper::CheckNumberOperands(masm, &call_runtime);
++      }
+       // Fast-case: Both operands are numbers.
+       // xmm4 and xmm5 are volatile XMM registers.
+       FloatingPointHelper::LoadFloatOperands(masm, xmm4, xmm5);
+diff --git a/src/x64/codegen-x64.h b/src/x64/codegen-x64.h
+index d82682f..4b01d83 100644
+--- a/src/x64/codegen-x64.h
++++ b/src/x64/codegen-x64.h
+@@ -655,13 +655,15 @@ class GenericBinaryOpStub: public CodeStub {
+  public:
+   GenericBinaryOpStub(Token::Value op,
+                       OverwriteMode mode,
+-                      GenericBinaryFlags flags)
++                      GenericBinaryFlags flags,
++                      bool only_numbers = false)
+       : op_(op),
+         mode_(mode),
+         flags_(flags),
+         args_in_registers_(false),
+         args_reversed_(false),
+-        name_(NULL) {
++        name_(NULL),
++        only_numbers_in_stub_(only_numbers) {
+     use_sse3_ = CpuFeatures::IsSupported(SSE3);
+     ASSERT(OpBits::is_valid(Token::NUM_TOKENS));
+   }
+@@ -686,28 +688,32 @@ class GenericBinaryOpStub: public CodeStub {
+   bool args_reversed_;  // Left and right argument are swapped.
+   bool use_sse3_;
+   char* name_;
++  bool only_numbers_in_stub_;
+ 
+   const char* GetName();
+ 
+ #ifdef DEBUG
+   void Print() {
+-    PrintF("GenericBinaryOpStub (op %s), "
+-           "(mode %d, flags %d, registers %d, reversed %d)\n",
++    PrintF("GenericBinaryOpStub %d (op %s), "
++           "(mode %d, flags %d, registers %d, reversed %d, only_numbers %d)\n",
++           MinorKey(),
+            Token::String(op_),
+            static_cast<int>(mode_),
+            static_cast<int>(flags_),
+            static_cast<int>(args_in_registers_),
+-           static_cast<int>(args_reversed_));
++           static_cast<int>(args_reversed_),
++           static_cast<int>(only_numbers_in_stub_));
+   }
+ #endif
+ 
+-  // Minor key encoding in 16 bits FRASOOOOOOOOOOMM.
++  // Minor key encoding in 16 bits NFRASOOOOOOOOOMM.
+   class ModeBits: public BitField<OverwriteMode, 0, 2> {};
+-  class OpBits: public BitField<Token::Value, 2, 10> {};
+-  class SSE3Bits: public BitField<bool, 12, 1> {};
+-  class ArgsInRegistersBits: public BitField<bool, 13, 1> {};
+-  class ArgsReversedBits: public BitField<bool, 14, 1> {};
+-  class FlagBits: public BitField<GenericBinaryFlags, 15, 1> {};
++  class OpBits: public BitField<Token::Value, 2, 9> {};
++  class SSE3Bits: public BitField<bool, 11, 1> {};
++  class ArgsInRegistersBits: public BitField<bool, 12, 1> {};
++  class ArgsReversedBits: public BitField<bool, 13, 1> {};
++  class FlagBits: public BitField<GenericBinaryFlags, 14, 1> {};
++  class OnlyNumberBits: public BitField<bool, 15, 1> {};
+ 
+   Major MajorKey() { return GenericBinaryOp; }
+   int MinorKey() {
+@@ -717,7 +723,8 @@ class GenericBinaryOpStub: public CodeStub {
+            | FlagBits::encode(flags_)
+            | SSE3Bits::encode(use_sse3_)
+            | ArgsInRegistersBits::encode(args_in_registers_)
+-           | ArgsReversedBits::encode(args_reversed_);
++           | ArgsReversedBits::encode(args_reversed_)
++           | OnlyNumberBits::encode(only_numbers_in_stub_);
+   }
+ 
+   void Generate(MacroAssembler* masm);
+diff --git a/src/x64/macro-assembler-x64.cc b/src/x64/macro-assembler-x64.cc
+index a504fa0..90a9c75 100644
+--- a/src/x64/macro-assembler-x64.cc
++++ b/src/x64/macro-assembler-x64.cc
+@@ -1598,6 +1598,17 @@ void MacroAssembler::CheckMap(Register obj,
+ }
+ 
+ 
++void MacroAssembler::AbortIfNotNumber(Register object, const char* msg) {
++  Label ok;
++  Condition is_smi = CheckSmi(object);
++  j(is_smi, &ok);
++  Cmp(FieldOperand(object, HeapObject::kMapOffset),
++      Factory::heap_number_map());
++  Assert(equal, msg);
++  bind(&ok);
++}
++
++
+ Condition MacroAssembler::IsObjectStringType(Register heap_object,
+                                              Register map,
+                                              Register instance_type) {
+diff --git a/src/x64/macro-assembler-x64.h b/src/x64/macro-assembler-x64.h
+index 937ec12..6deeddc 100644
+--- a/src/x64/macro-assembler-x64.h
++++ b/src/x64/macro-assembler-x64.h
+@@ -486,6 +486,9 @@ class MacroAssembler: public Assembler {
+   // jcc instructions (je, ja, jae, jb, jbe, je, and jz).
+   void FCmp();
+ 
++  // Abort execution if argument is not a number. Used in debug code.
++  void AbortIfNotNumber(Register object, const char* msg);
++
+   // ---------------------------------------------------------------------------
+   // Exception handling
+ 
+diff --git a/src/x64/virtual-frame-x64.cc b/src/x64/virtual-frame-x64.cc
+index 291596b..2bd7d8d 100644
+--- a/src/x64/virtual-frame-x64.cc
++++ b/src/x64/virtual-frame-x64.cc
+@@ -45,7 +45,7 @@ VirtualFrame::VirtualFrame()
+     : elements_(parameter_count() + local_count() + kPreallocatedElements),
+       stack_pointer_(parameter_count() + 1) {  // 0-based index of TOS.
+   for (int i = 0; i <= stack_pointer_; i++) {
+-    elements_.Add(FrameElement::MemoryElement());
++    elements_.Add(FrameElement::MemoryElement(NumberInfo::kUnknown));
+   }
+   for (int i = 0; i < RegisterAllocator::kNumRegisters; i++) {
+     register_locations_[i] = kIllegalIndex;
+@@ -193,25 +193,25 @@ void VirtualFrame::EmitPop(const Operand& operand) {
+ }
+ 
+ 
+-void VirtualFrame::EmitPush(Register reg) {
++void VirtualFrame::EmitPush(Register reg, NumberInfo::Type info) {
+   ASSERT(stack_pointer_ == element_count() - 1);
+-  elements_.Add(FrameElement::MemoryElement());
++  elements_.Add(FrameElement::MemoryElement(info));
+   stack_pointer_++;
+   __ push(reg);
+ }
+ 
+ 
+-void VirtualFrame::EmitPush(const Operand& operand) {
++void VirtualFrame::EmitPush(const Operand& operand, NumberInfo::Type info) {
+   ASSERT(stack_pointer_ == element_count() - 1);
+-  elements_.Add(FrameElement::MemoryElement());
++  elements_.Add(FrameElement::MemoryElement(info));
+   stack_pointer_++;
+   __ push(operand);
+ }
+ 
+ 
+-void VirtualFrame::EmitPush(Immediate immediate) {
++void VirtualFrame::EmitPush(Immediate immediate, NumberInfo::Type info) {
+   ASSERT(stack_pointer_ == element_count() - 1);
+-  elements_.Add(FrameElement::MemoryElement());
++  elements_.Add(FrameElement::MemoryElement(info));
+   stack_pointer_++;
+   __ push(immediate);
+ }
+@@ -219,7 +219,7 @@ void VirtualFrame::EmitPush(Immediate immediate) {
+ 
+ void VirtualFrame::EmitPush(Smi* smi_value) {
+   ASSERT(stack_pointer_ == element_count() - 1);
+-  elements_.Add(FrameElement::MemoryElement());
++  elements_.Add(FrameElement::MemoryElement(NumberInfo::kSmi));
+   stack_pointer_++;
+   __ Push(smi_value);
+ }
+@@ -227,15 +227,21 @@ void VirtualFrame::EmitPush(Smi* smi_value) {
+ 
+ void VirtualFrame::EmitPush(Handle<Object> value) {
+   ASSERT(stack_pointer_ == element_count() - 1);
+-  elements_.Add(FrameElement::MemoryElement());
++  NumberInfo::Type info = NumberInfo::kUnknown;
++  if (value->IsSmi()) {
++    info = NumberInfo::kSmi;
++  } else if (value->IsHeapNumber()) {
++    info = NumberInfo::kHeapNumber;
++  }
++  elements_.Add(FrameElement::MemoryElement(info));
+   stack_pointer_++;
+   __ Push(value);
+ }
+ 
+ 
+-void VirtualFrame::EmitPush(Heap::RootListIndex index) {
++void VirtualFrame::EmitPush(Heap::RootListIndex index, NumberInfo::Type info) {
+   ASSERT(stack_pointer_ == element_count() - 1);
+-  elements_.Add(FrameElement::MemoryElement());
++  elements_.Add(FrameElement::MemoryElement(info));
+   stack_pointer_++;
+   __ PushRoot(index);
+ }
+@@ -305,10 +311,14 @@ int VirtualFrame::InvalidateFrameSlotAt(int index) {
+   // Set the new backing element.
+   if (elements_[new_backing_index].is_synced()) {
+     elements_[new_backing_index] =
+-        FrameElement::RegisterElement(backing_reg, FrameElement::SYNCED);
++        FrameElement::RegisterElement(backing_reg,
++                                      FrameElement::SYNCED,
++                                      original.number_info());
+   } else {
+     elements_[new_backing_index] =
+-        FrameElement::RegisterElement(backing_reg, FrameElement::NOT_SYNCED);
++        FrameElement::RegisterElement(backing_reg,
++                                      FrameElement::NOT_SYNCED,
++                                      original.number_info());
+   }
+   // Update the other copies.
+   for (int i = new_backing_index + 1; i < element_count(); i++) {
+@@ -339,7 +349,8 @@ void VirtualFrame::TakeFrameSlotAt(int index) {
+       ASSERT(fresh.is_valid());
+       FrameElement new_element =
+           FrameElement::RegisterElement(fresh.reg(),
+-                                        FrameElement::NOT_SYNCED);
++                                        FrameElement::NOT_SYNCED,
++                                        original.number_info());
+       Use(fresh.reg(), element_count());
+       elements_.Add(new_element);
+       __ movq(fresh.reg(), Operand(rbp, fp_relative(index)));
+@@ -480,10 +491,12 @@ void VirtualFrame::MakeMergable() {
+   for (int i = 0; i < element_count(); i++) {
+     FrameElement element = elements_[i];
+ 
++    // In all cases we have to reset the number type information
++    // to unknown for a mergable frame because of incoming back edges.
+     if (element.is_constant() || element.is_copy()) {
+       if (element.is_synced()) {
+         // Just spill.
+-        elements_[i] = FrameElement::MemoryElement();
++        elements_[i] = FrameElement::MemoryElement(NumberInfo::kUnknown);
+       } else {
+         // Allocate to a register.
+         FrameElement backing_element;  // Invalid if not a copy.
+@@ -494,7 +507,8 @@ void VirtualFrame::MakeMergable() {
+         ASSERT(fresh.is_valid());  // A register was spilled if all were in use.
+         elements_[i] =
+             FrameElement::RegisterElement(fresh.reg(),
+-                                          FrameElement::NOT_SYNCED);
++                                          FrameElement::NOT_SYNCED,
++                                          NumberInfo::kUnknown);
+         Use(fresh.reg(), i);
+ 
+         // Emit a move.
+@@ -523,6 +537,7 @@ void VirtualFrame::MakeMergable() {
+       // The copy flag is not relied on before the end of this loop,
+       // including when registers are spilled.
+       elements_[i].clear_copied();
++      elements_[i].set_number_info(NumberInfo::kUnknown);
+     }
+   }
+ }
+@@ -728,6 +743,14 @@ Result VirtualFrame::Pop() {
+   int index = element_count();
+   ASSERT(element.is_valid());
+ 
++  // Get number type information of the result.
++  NumberInfo::Type info;
++  if (!element.is_copy()) {
++    info = element.number_info();
++  } else {
++    info = elements_[element.index()].number_info();
++  }
++
+   bool pop_needed = (stack_pointer_ == index);
+   if (pop_needed) {
+     stack_pointer_--;
+@@ -735,6 +758,7 @@ Result VirtualFrame::Pop() {
+       Result temp = cgen()->allocator()->Allocate();
+       ASSERT(temp.is_valid());
+       __ pop(temp.reg());
++      temp.set_number_info(info);
+       return temp;
+     }
+ 
+@@ -762,14 +786,16 @@ Result VirtualFrame::Pop() {
+     ASSERT(temp.is_valid());
+     Use(temp.reg(), index);
+     FrameElement new_element =
+-        FrameElement::RegisterElement(temp.reg(), FrameElement::SYNCED);
++        FrameElement::RegisterElement(temp.reg(),
++                                      FrameElement::SYNCED,
++                                      element.number_info());
+     // Preserve the copy flag on the element.
+     if (element.is_copied()) new_element.set_copied();
+     elements_[index] = new_element;
+     __ movq(temp.reg(), Operand(rbp, fp_relative(index)));
+-    return Result(temp.reg());
++    return Result(temp.reg(), info);
+   } else if (element.is_register()) {
+-    return Result(element.reg());
++    return Result(element.reg(), info);
+   } else {
+     ASSERT(element.is_constant());
+     return Result(element.handle());
+diff --git a/src/x64/virtual-frame-x64.h b/src/x64/virtual-frame-x64.h
+index 9cb4d06..c9aa799 100644
+--- a/src/x64/virtual-frame-x64.h
++++ b/src/x64/virtual-frame-x64.h
+@@ -28,6 +28,7 @@
+ #ifndef V8_X64_VIRTUAL_FRAME_X64_H_
+ #define V8_X64_VIRTUAL_FRAME_X64_H_
+ 
++#include "number-info.h"
+ #include "register-allocator.h"
+ #include "scopes.h"
+ 
+@@ -81,7 +82,8 @@ class VirtualFrame : public ZoneObject {
+   MacroAssembler* masm() { return cgen()->masm(); }
+ 
+   // Create a duplicate of an existing valid frame element.
+-  FrameElement CopyElementAt(int index);
++  FrameElement CopyElementAt(int index,
++    NumberInfo::Type info = NumberInfo::kUninitialized);
+ 
+   // The number of elements on the virtual frame.
+   int element_count() { return elements_.length(); }
+@@ -380,16 +382,20 @@ class VirtualFrame : public ZoneObject {
+ 
+   // Push an element on top of the expression stack and emit a
+   // corresponding push instruction.
+-  void EmitPush(Register reg);
+-  void EmitPush(const Operand& operand);
+-  void EmitPush(Heap::RootListIndex index);
+-  void EmitPush(Immediate immediate);
++  void EmitPush(Register reg,
++                NumberInfo::Type info = NumberInfo::kUnknown);
++  void EmitPush(const Operand& operand,
++                NumberInfo::Type info = NumberInfo::kUnknown);
++  void EmitPush(Heap::RootListIndex index,
++                NumberInfo::Type info = NumberInfo::kUnknown);
++  void EmitPush(Immediate immediate,
++                NumberInfo::Type info = NumberInfo::kUnknown);
+   void EmitPush(Smi* value);
+   // Uses kScratchRegister, emits appropriate relocation info.
+   void EmitPush(Handle<Object> value);
+ 
+   // Push an element on the virtual frame.
+-  void Push(Register reg);
++  void Push(Register reg, NumberInfo::Type info = NumberInfo::kUnknown);
+   void Push(Handle<Object> value);
+   void Push(Smi* value) { Push(Handle<Object>(value)); }
+ 
+@@ -397,7 +403,7 @@ class VirtualFrame : public ZoneObject {
+   // frame).
+   void Push(Result* result) {
+     if (result->is_register()) {
+-      Push(result->reg());
++      Push(result->reg(), result->number_info());
+     } else {
+       ASSERT(result->is_constant());
+       Push(result->handle());
+diff --git a/tools/gyp/v8.gyp b/tools/gyp/v8.gyp
+index f2d1b98..48070d4 100644
+--- a/tools/gyp/v8.gyp
++++ b/tools/gyp/v8.gyp
+@@ -320,6 +320,7 @@
+         '../../src/messages.cc',
+         '../../src/messages.h',
+         '../../src/natives.h',
++	'../../src/number-info.h',
+         '../../src/objects-debug.cc',
+         '../../src/objects-inl.h',
+         '../../src/objects.cc',
+diff --git a/tools/visual_studio/v8_base.vcproj b/tools/visual_studio/v8_base.vcproj
+index e58e8ff..685ad64 100644
+--- a/tools/visual_studio/v8_base.vcproj
++++ b/tools/visual_studio/v8_base.vcproj
+@@ -633,6 +633,10 @@
+ 				>
+ 			</File>
+ 			<File
++				RelativePath="..\..\src\number-info.h"
++				>
++			</File>
++			<File
+ 				RelativePath="..\..\src\objects-debug.cc"
+ 				>
+ 				<FileConfiguration
+diff --git a/tools/visual_studio/v8_base_arm.vcproj b/tools/visual_studio/v8_base_arm.vcproj
+index 4b37b53..4fa8461 100644
+--- a/tools/visual_studio/v8_base_arm.vcproj
++++ b/tools/visual_studio/v8_base_arm.vcproj
+@@ -637,6 +637,10 @@
+ 				>
+ 			</File>
+ 			<File
++				RelativePath="..\..\src\number-info.h"
++				>
++			</File>
++			<File
+ 				RelativePath="..\..\src\objects-debug.cc"
+ 				>
+ 				<FileConfiguration
+diff --git a/tools/visual_studio/v8_base_x64.vcproj b/tools/visual_studio/v8_base_x64.vcproj
+index b6d5c7d..b47d75f 100644
+--- a/tools/visual_studio/v8_base_x64.vcproj
++++ b/tools/visual_studio/v8_base_x64.vcproj
+@@ -634,6 +634,10 @@
+ 				>
+ 			</File>
+ 			<File
++				RelativePath="..\..\src\number-info.h"
++				>
++			</File>
++			<File
+ 				RelativePath="..\..\src\objects-debug.cc"
+ 				>
+ 				<FileConfiguration
