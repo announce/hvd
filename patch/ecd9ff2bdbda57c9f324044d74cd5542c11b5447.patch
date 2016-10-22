@@ -1,0 +1,925 @@
+Index: src/arm/full-codegen-arm.cc
+diff --git a/src/arm/full-codegen-arm.cc b/src/arm/full-codegen-arm.cc
+index 1710b609dc68740a60cb1984cdbb9223415e99f5..f4938a72975ee612de115649a93687043760f372 100644
+--- a/src/arm/full-codegen-arm.cc
++++ b/src/arm/full-codegen-arm.cc
+@@ -1383,6 +1383,19 @@ void FullCodeGenerator::EmitLoadHomeObject(SuperReference* expr) {
+ }
+
+
++void FullCodeGenerator::EmitSetHomeObjectIfNeeded(Expression* initializer,
++                                                  int offset) {
++  if (NeedsHomeObject(initializer)) {
++    __ ldr(StoreDescriptor::ReceiverRegister(), MemOperand(sp));
++    __ mov(StoreDescriptor::NameRegister(),
++           Operand(isolate()->factory()->home_object_symbol()));
++    __ ldr(StoreDescriptor::ValueRegister(),
++           MemOperand(sp, offset * kPointerSize));
++    CallStoreIC();
++  }
++}
++
++
+ void FullCodeGenerator::EmitLoadGlobalCheckExtensions(VariableProxy* proxy,
+                                                       TypeofState typeof_state,
+                                                       Label* slow) {
+@@ -1739,6 +1752,14 @@ void FullCodeGenerator::VisitObjectLiteral(ObjectLiteral* expr) {
+             __ ldr(StoreDescriptor::ReceiverRegister(), MemOperand(sp));
+             CallStoreIC(key->LiteralFeedbackId());
+             PrepareForBailoutForId(key->id(), NO_REGISTERS);
++
++            if (NeedsHomeObject(value)) {
++              __ Move(StoreDescriptor::ReceiverRegister(), r0);
++              __ mov(StoreDescriptor::NameRegister(),
++                     Operand(isolate()->factory()->home_object_symbol()));
++              __ ldr(StoreDescriptor::ValueRegister(), MemOperand(sp));
++              CallStoreIC();
++            }
+           } else {
+             VisitForEffect(value);
+           }
+@@ -1750,6 +1771,7 @@ void FullCodeGenerator::VisitObjectLiteral(ObjectLiteral* expr) {
+         VisitForStackValue(key);
+         VisitForStackValue(value);
+         if (property->emit_store()) {
++          EmitSetHomeObjectIfNeeded(value, 2);
+           __ mov(r0, Operand(Smi::FromInt(SLOPPY)));  // PropertyAttributes
+           __ push(r0);
+           __ CallRuntime(Runtime::kSetProperty, 4);
+@@ -1787,7 +1809,9 @@ void FullCodeGenerator::VisitObjectLiteral(ObjectLiteral* expr) {
+     __ push(r0);
+     VisitForStackValue(it->first);
+     EmitAccessor(it->second->getter);
++    EmitSetHomeObjectIfNeeded(it->second->getter, 2);
+     EmitAccessor(it->second->setter);
++    EmitSetHomeObjectIfNeeded(it->second->setter, 3);
+     __ mov(r0, Operand(Smi::FromInt(NONE)));
+     __ push(r0);
+     __ CallRuntime(Runtime::kDefineAccessorPropertyUnchecked, 5);
+@@ -2534,6 +2558,7 @@ void FullCodeGenerator::EmitClassDefineProperties(ClassLiteral* lit) {
+     __ push(scratch);
+     VisitForStackValue(key);
+     VisitForStackValue(value);
++    EmitSetHomeObjectIfNeeded(value, 2);
+
+     switch (property->kind()) {
+       case ObjectLiteral::Property::CONSTANT:
+Index: src/arm64/full-codegen-arm64.cc
+diff --git a/src/arm64/full-codegen-arm64.cc b/src/arm64/full-codegen-arm64.cc
+index 426287540e4e2b523b9ed40c9030504f5ee79cf3..b693d591270457c022d1f84aff55bd7cbea899fa 100644
+--- a/src/arm64/full-codegen-arm64.cc
++++ b/src/arm64/full-codegen-arm64.cc
+@@ -1372,6 +1372,18 @@ void FullCodeGenerator::EmitLoadHomeObject(SuperReference* expr) {
+ }
+
+
++void FullCodeGenerator::EmitSetHomeObjectIfNeeded(Expression* initializer,
++                                                  int offset) {
++  if (NeedsHomeObject(initializer)) {
++    __ Peek(StoreDescriptor::ReceiverRegister(), 0);
++    __ Mov(StoreDescriptor::NameRegister(),
++           Operand(isolate()->factory()->home_object_symbol()));
++    __ Peek(StoreDescriptor::ValueRegister(), offset * kPointerSize);
++    CallStoreIC();
++  }
++}
++
++
+ void FullCodeGenerator::EmitLoadGlobalCheckExtensions(VariableProxy* proxy,
+                                                       TypeofState typeof_state,
+                                                       Label* slow) {
+@@ -1721,6 +1733,14 @@ void FullCodeGenerator::VisitObjectLiteral(ObjectLiteral* expr) {
+             __ Peek(StoreDescriptor::ReceiverRegister(), 0);
+             CallStoreIC(key->LiteralFeedbackId());
+             PrepareForBailoutForId(key->id(), NO_REGISTERS);
++
++            if (NeedsHomeObject(value)) {
++              __ Mov(StoreDescriptor::ReceiverRegister(), x0);
++              __ Mov(StoreDescriptor::NameRegister(),
++                     Operand(isolate()->factory()->home_object_symbol()));
++              __ Peek(StoreDescriptor::ValueRegister(), 0);
++              CallStoreIC();
++            }
+           } else {
+             VisitForEffect(value);
+           }
+@@ -1732,6 +1752,7 @@ void FullCodeGenerator::VisitObjectLiteral(ObjectLiteral* expr) {
+           __ Push(x0);
+           VisitForStackValue(key);
+           VisitForStackValue(value);
++          EmitSetHomeObjectIfNeeded(value, 2);
+           __ Mov(x0, Smi::FromInt(SLOPPY));  // Strict mode
+           __ Push(x0);
+           __ CallRuntime(Runtime::kSetProperty, 4);
+@@ -1769,7 +1790,9 @@ void FullCodeGenerator::VisitObjectLiteral(ObjectLiteral* expr) {
+       __ Push(x10);
+       VisitForStackValue(it->first);
+       EmitAccessor(it->second->getter);
++      EmitSetHomeObjectIfNeeded(it->second->getter, 2);
+       EmitAccessor(it->second->setter);
++      EmitSetHomeObjectIfNeeded(it->second->setter, 3);
+       __ Mov(x10, Smi::FromInt(NONE));
+       __ Push(x10);
+       __ CallRuntime(Runtime::kDefineAccessorPropertyUnchecked, 5);
+@@ -2203,6 +2226,7 @@ void FullCodeGenerator::EmitClassDefineProperties(ClassLiteral* lit) {
+     __ Push(scratch);
+     VisitForStackValue(key);
+     VisitForStackValue(value);
++    EmitSetHomeObjectIfNeeded(value, 2);
+
+     switch (property->kind()) {
+       case ObjectLiteral::Property::CONSTANT:
+Index: src/ast.cc
+diff --git a/src/ast.cc b/src/ast.cc
+index 26bc491557aa9d3d4c37f9aa7a972e4fb56e5dab..2edd51ecde537a845fc0a08fff4a13371de62439 100644
+--- a/src/ast.cc
++++ b/src/ast.cc
+@@ -151,6 +151,12 @@ StrictMode FunctionLiteral::strict_mode() const {
+ }
+
+
++bool FunctionLiteral::needs_super_binding() const {
++  DCHECK_NOT_NULL(scope());
++  return scope()->uses_super() || scope()->inner_uses_super();
++}
++
++
+ void FunctionLiteral::InitializeSharedInfo(
+     Handle<Code> unoptimized_code) {
+   for (RelocIterator it(*unoptimized_code); !it.done(); it.next()) {
+Index: src/ast.h
+diff --git a/src/ast.h b/src/ast.h
+index 170091616fee68ebf86ebda40f04dc060cd432ca..d19028d04f1d233bdbda46df868e43ac99416c65 100644
+--- a/src/ast.h
++++ b/src/ast.h
+@@ -2497,6 +2497,12 @@ class FunctionLiteral FINAL : public Expression {
+   bool is_expression() const { return IsExpression::decode(bitfield_); }
+   bool is_anonymous() const { return IsAnonymous::decode(bitfield_); }
+   StrictMode strict_mode() const;
++  bool needs_super_binding() const;
++
++  static bool NeedsHomeObject(Expression* literal) {
++    return literal != NULL && literal->IsFunctionLiteral() &&
++           literal->AsFunctionLiteral()->needs_super_binding();
++  }
+
+   int materialized_literal_count() { return materialized_literal_count_; }
+   int expected_property_count() { return expected_property_count_; }
+Index: src/full-codegen.h
+diff --git a/src/full-codegen.h b/src/full-codegen.h
+index f0328547fde7d36b96449e31a106036f65e46363..fd53ceaf613aaeed26e39e39a7bd1b6812a4906f 100644
+--- a/src/full-codegen.h
++++ b/src/full-codegen.h
+@@ -614,6 +614,15 @@ class FullCodeGenerator: public AstVisitor {
+
+   void EmitLoadHomeObject(SuperReference* expr);
+
++  static bool NeedsHomeObject(Expression* expr) {
++    return FunctionLiteral::NeedsHomeObject(expr);
++  }
++
++  // Adds the [[HomeObject]] to |initializer| if it is a FunctionLiteral.
++  // The value of the initializer is expected to be at the top of the stack.
++  // |offset| is the offset in the stack where the home object can be found.
++  void EmitSetHomeObjectIfNeeded(Expression* initializer, int offset);
++
+   void EmitLoadSuperConstructor(SuperReference* expr);
+
+   void CallIC(Handle<Code> code,
+Index: src/hydrogen.cc
+diff --git a/src/hydrogen.cc b/src/hydrogen.cc
+index b9b3eb0819c30ad6d141de5d7cadcb1351218b9b..e91609dba4387ae6c75f80dca8fe84b7ec960a50 100644
+--- a/src/hydrogen.cc
++++ b/src/hydrogen.cc
+@@ -5653,6 +5653,17 @@ void HOptimizedGraphBuilder::VisitObjectLiteral(ObjectLiteral* expr) {
+           if (property->emit_store()) {
+             CHECK_ALIVE(VisitForValue(value));
+             HValue* value = Pop();
++
++            // Add [[HomeObject]] to function literals.
++            if (FunctionLiteral::NeedsHomeObject(property->value())) {
++              Handle<Symbol> sym = isolate()->factory()->home_object_symbol();
++              HInstruction* store_home = BuildKeyedGeneric(
++                  STORE, NULL, value, Add<HConstant>(sym), literal);
++              AddInstruction(store_home);
++              DCHECK(store_home->HasObservableSideEffects());
++              Add<HSimulate>(property->value()->id(), REMOVABLE_SIMULATE);
++            }
++
+             Handle<Map> map = property->GetReceiverType();
+             Handle<String> name = property->key()->AsPropertyName();
+             HInstruction* store;
+@@ -5674,9 +5685,8 @@ void HOptimizedGraphBuilder::VisitObjectLiteral(ObjectLiteral* expr) {
+               }
+             }
+             AddInstruction(store);
+-            if (store->HasObservableSideEffects()) {
+-              Add<HSimulate>(key->id(), REMOVABLE_SIMULATE);
+-            }
++            DCHECK(store->HasObservableSideEffects());
++            Add<HSimulate>(key->id(), REMOVABLE_SIMULATE);
+           } else {
+             CHECK_ALIVE(VisitForEffect(value));
+           }
+Index: src/ia32/full-codegen-ia32.cc
+diff --git a/src/ia32/full-codegen-ia32.cc b/src/ia32/full-codegen-ia32.cc
+index acf59b4d86c14286814ebc88dc60b0367097a857..ab9438ab7ed23ef5c74ba8abdc15a20e80da2045 100644
+--- a/src/ia32/full-codegen-ia32.cc
++++ b/src/ia32/full-codegen-ia32.cc
+@@ -1306,6 +1306,19 @@ void FullCodeGenerator::EmitLoadHomeObject(SuperReference* expr) {
+ }
+
+
++void FullCodeGenerator::EmitSetHomeObjectIfNeeded(Expression* initializer,
++                                                  int offset) {
++  if (NeedsHomeObject(initializer)) {
++    __ mov(StoreDescriptor::ReceiverRegister(), Operand(esp, 0));
++    __ mov(StoreDescriptor::NameRegister(),
++           Immediate(isolate()->factory()->home_object_symbol()));
++    __ mov(StoreDescriptor::ValueRegister(),
++           Operand(esp, offset * kPointerSize));
++    CallStoreIC();
++  }
++}
++
++
+ void FullCodeGenerator::EmitLoadGlobalCheckExtensions(VariableProxy* proxy,
+                                                       TypeofState typeof_state,
+                                                       Label* slow) {
+@@ -1670,6 +1683,14 @@ void FullCodeGenerator::VisitObjectLiteral(ObjectLiteral* expr) {
+             __ mov(StoreDescriptor::ReceiverRegister(), Operand(esp, 0));
+             CallStoreIC(key->LiteralFeedbackId());
+             PrepareForBailoutForId(key->id(), NO_REGISTERS);
++
++            if (NeedsHomeObject(value)) {
++              __ mov(StoreDescriptor::ReceiverRegister(), eax);
++              __ mov(StoreDescriptor::NameRegister(),
++                     Immediate(isolate()->factory()->home_object_symbol()));
++              __ mov(StoreDescriptor::ValueRegister(), Operand(esp, 0));
++              CallStoreIC();
++            }
+           } else {
+             VisitForEffect(value);
+           }
+@@ -1679,6 +1700,7 @@ void FullCodeGenerator::VisitObjectLiteral(ObjectLiteral* expr) {
+         VisitForStackValue(key);
+         VisitForStackValue(value);
+         if (property->emit_store()) {
++          EmitSetHomeObjectIfNeeded(value, 2);
+           __ push(Immediate(Smi::FromInt(SLOPPY)));  // Strict mode
+           __ CallRuntime(Runtime::kSetProperty, 4);
+         } else {
+@@ -1711,7 +1733,9 @@ void FullCodeGenerator::VisitObjectLiteral(ObjectLiteral* expr) {
+     __ push(Operand(esp, 0));  // Duplicate receiver.
+     VisitForStackValue(it->first);
+     EmitAccessor(it->second->getter);
++    EmitSetHomeObjectIfNeeded(it->second->getter, 2);
+     EmitAccessor(it->second->setter);
++    EmitSetHomeObjectIfNeeded(it->second->setter, 3);
+     __ push(Immediate(Smi::FromInt(NONE)));
+     __ CallRuntime(Runtime::kDefineAccessorPropertyUnchecked, 5);
+   }
+@@ -2448,6 +2472,7 @@ void FullCodeGenerator::EmitClassDefineProperties(ClassLiteral* lit) {
+     }
+     VisitForStackValue(key);
+     VisitForStackValue(value);
++    EmitSetHomeObjectIfNeeded(value, 2);
+
+     switch (property->kind()) {
+       case ObjectLiteral::Property::CONSTANT:
+Index: src/preparser.h
+diff --git a/src/preparser.h b/src/preparser.h
+index 7c9791fc9ca25223983afbfee8f4f666c709af24..a93c1e5e7b75438f63f0d3612c73a567d19e7c0d 100644
+--- a/src/preparser.h
++++ b/src/preparser.h
+@@ -965,6 +965,7 @@ class PreParserScope {
+   bool IsDeclared(const PreParserIdentifier& identifier) const { return false; }
+   void DeclareParameter(const PreParserIdentifier& identifier, VariableMode) {}
+   void RecordArgumentsUsage() {}
++  void RecordSuperUsage() {}
+   void RecordThisUsage() {}
+
+   // Allow scope->Foo() to work.
+@@ -2508,6 +2509,7 @@ ParserBase<Traits>::ParseMemberWithNewPrefixesExpression(bool* ok) {
+     int new_pos = position();
+     ExpressionT result = this->EmptyExpression();
+     if (Check(Token::SUPER)) {
++      scope_->RecordSuperUsage();
+       result = this->SuperReference(scope_, factory());
+     } else {
+       result = this->ParseMemberWithNewPrefixesExpression(CHECK_OK);
+@@ -2567,6 +2569,7 @@ ParserBase<Traits>::ParseMemberExpression(bool* ok) {
+   } else if (peek() == Token::SUPER) {
+     int beg_pos = position();
+     Consume(Token::SUPER);
++    scope_->RecordSuperUsage();
+     Token::Value next = peek();
+     if (next == Token::PERIOD || next == Token::LBRACK ||
+         next == Token::LPAREN) {
+Index: src/runtime/runtime-classes.cc
+diff --git a/src/runtime/runtime-classes.cc b/src/runtime/runtime-classes.cc
+index 30ff918ae5701fadc960f82f69c62b0c9651704a..d1dbe21363fdd09333dadbea552a07b7f20c442c 100644
+--- a/src/runtime/runtime-classes.cc
++++ b/src/runtime/runtime-classes.cc
+@@ -113,6 +113,8 @@ RUNTIME_FUNCTION(Runtime_DefineClass) {
+       isolate, JSObject::SetOwnPropertyIgnoreAttributes(
+                    constructor, isolate->factory()->prototype_string(),
+                    prototype, attribs));
++
++  // TODO(arv): Only do this conditionally.
+   Handle<Symbol> home_object_symbol(isolate->heap()->home_object_symbol());
+   RETURN_FAILURE_ON_EXCEPTION(
+       isolate, JSObject::SetOwnPropertyIgnoreAttributes(
+@@ -153,11 +155,6 @@ RUNTIME_FUNCTION(Runtime_DefineClassMethod) {
+   CONVERT_ARG_HANDLE_CHECKED(Object, key, 1);
+   CONVERT_ARG_HANDLE_CHECKED(JSFunction, function, 2);
+
+-  RETURN_FAILURE_ON_EXCEPTION(
+-      isolate, JSObject::SetOwnPropertyIgnoreAttributes(
+-                   function, isolate->factory()->home_object_symbol(), object,
+-                   DONT_ENUM));
+-
+   uint32_t index;
+   if (key->ToArrayIndex(&index)) {
+     RETURN_FAILURE_ON_EXCEPTION(
+@@ -191,11 +188,6 @@ RUNTIME_FUNCTION(Runtime_DefineClassGetter) {
+                                      Runtime::ToName(isolate, key));
+   RETURN_FAILURE_ON_EXCEPTION(
+       isolate,
+-      JSObject::SetOwnPropertyIgnoreAttributes(
+-          getter, isolate->factory()->home_object_symbol(), object, DONT_ENUM));
+-
+-  RETURN_FAILURE_ON_EXCEPTION(
+-      isolate,
+       JSObject::DefineAccessor(object, name, getter,
+                                isolate->factory()->null_value(), NONE));
+   return isolate->heap()->undefined_value();
+@@ -214,10 +206,6 @@ RUNTIME_FUNCTION(Runtime_DefineClassSetter) {
+                                      Runtime::ToName(isolate, key));
+   RETURN_FAILURE_ON_EXCEPTION(
+       isolate,
+-      JSObject::SetOwnPropertyIgnoreAttributes(
+-          setter, isolate->factory()->home_object_symbol(), object, DONT_ENUM));
+-  RETURN_FAILURE_ON_EXCEPTION(
+-      isolate,
+       JSObject::DefineAccessor(object, name, isolate->factory()->null_value(),
+                                setter, NONE));
+   return isolate->heap()->undefined_value();
+Index: src/scopes.cc
+diff --git a/src/scopes.cc b/src/scopes.cc
+index 51c00653c6165a6adc5832040bd27ab090467272..92a8dc779b4e31bc92b4a5e60457a018f3b8bc1c 100644
+--- a/src/scopes.cc
++++ b/src/scopes.cc
+@@ -160,16 +160,18 @@ void Scope::SetDefaults(ScopeType scope_type,
+   scope_inside_with_ = false;
+   scope_contains_with_ = false;
+   scope_calls_eval_ = false;
+-  scope_uses_this_ = false;
+   scope_uses_arguments_ = false;
++  scope_uses_super_ = false;
++  scope_uses_this_ = false;
+   asm_module_ = false;
+   asm_function_ = outer_scope != NULL && outer_scope->asm_module_;
+   // Inherit the strict mode from the parent scope.
+   strict_mode_ = outer_scope != NULL ? outer_scope->strict_mode_ : SLOPPY;
+   outer_scope_calls_sloppy_eval_ = false;
+   inner_scope_calls_eval_ = false;
+-  inner_scope_uses_this_ = false;
+   inner_scope_uses_arguments_ = false;
++  inner_scope_uses_this_ = false;
++  inner_scope_uses_super_ = false;
+   force_eager_compilation_ = false;
+   force_context_allocation_ = (outer_scope != NULL && !is_function_scope())
+       ? outer_scope->has_forced_context_allocation() : false;
+@@ -889,12 +891,14 @@ void Scope::Print(int n) {
+   if (scope_inside_with_) Indent(n1, "// scope inside 'with'\n");
+   if (scope_contains_with_) Indent(n1, "// scope contains 'with'\n");
+   if (scope_calls_eval_) Indent(n1, "// scope calls 'eval'\n");
+-  if (scope_uses_this_) Indent(n1, "// scope uses 'this'\n");
+   if (scope_uses_arguments_) Indent(n1, "// scope uses 'arguments'\n");
+-  if (inner_scope_uses_this_) Indent(n1, "// inner scope uses 'this'\n");
++  if (scope_uses_super_) Indent(n1, "// scope uses 'super'\n");
++  if (scope_uses_this_) Indent(n1, "// scope uses 'this'\n");
+   if (inner_scope_uses_arguments_) {
+     Indent(n1, "// inner scope uses 'arguments'\n");
+   }
++  if (inner_scope_uses_super_) Indent(n1, "// inner scope uses 'super'\n");
++  if (inner_scope_uses_this_) Indent(n1, "// inner scope uses 'this'\n");
+   if (outer_scope_calls_sloppy_eval_) {
+     Indent(n1, "// outer scope calls 'eval' in sloppy context\n");
+   }
+@@ -1177,15 +1181,18 @@ void Scope::PropagateScopeInfo(bool outer_scope_calls_sloppy_eval ) {
+       inner_scope_calls_eval_ = true;
+     }
+     // If the inner scope is an arrow function, propagate the flags tracking
+-    // usage of this/arguments, but do not propagate them out from normal
++    // usage of arguments/super/this, but do not propagate them out from normal
+     // functions.
+     if (!inner->is_function_scope() || inner->is_arrow_scope()) {
+-      if (inner->scope_uses_this_ || inner->inner_scope_uses_this_) {
+-        inner_scope_uses_this_ = true;
+-      }
+       if (inner->scope_uses_arguments_ || inner->inner_scope_uses_arguments_) {
+         inner_scope_uses_arguments_ = true;
+       }
++      if (inner->scope_uses_super_ || inner->inner_scope_uses_super_) {
++        inner_scope_uses_super_ = true;
++      }
++      if (inner->scope_uses_this_ || inner->inner_scope_uses_this_) {
++        inner_scope_uses_this_ = true;
++      }
+     }
+     if (inner->force_eager_compilation_) {
+       force_eager_compilation_ = true;
+Index: src/scopes.h
+diff --git a/src/scopes.h b/src/scopes.h
+index 25305de1e1fd2c565d4db9b7243ca96fa7680fec..b506c58cdd109dd3d66e7bac9188a51c6d3fa358 100644
+--- a/src/scopes.h
++++ b/src/scopes.h
+@@ -211,12 +211,15 @@ class Scope: public ZoneObject {
+   // Inform the scope that the corresponding code contains an eval call.
+   void RecordEvalCall() { if (!is_global_scope()) scope_calls_eval_ = true; }
+
+-  // Inform the scope that the corresponding code uses "this".
+-  void RecordThisUsage() { scope_uses_this_ = true; }
+-
+   // Inform the scope that the corresponding code uses "arguments".
+   void RecordArgumentsUsage() { scope_uses_arguments_ = true; }
+
++  // Inform the scope that the corresponding code uses "super".
++  void RecordSuperUsage() { scope_uses_super_ = true; }
++
++  // Inform the scope that the corresponding code uses "this".
++  void RecordThisUsage() { scope_uses_this_ = true; }
++
+   // Set the strict mode flag (unless disabled by a global flag).
+   void SetStrictMode(StrictMode strict_mode) { strict_mode_ = strict_mode; }
+
+@@ -301,14 +304,18 @@ class Scope: public ZoneObject {
+   // Does this scope contain a with statement.
+   bool contains_with() const { return scope_contains_with_; }
+
+-  // Does this scope access "this".
+-  bool uses_this() const { return scope_uses_this_; }
+-  // Does any inner scope access "this".
+-  bool inner_uses_this() const { return inner_scope_uses_this_; }
+   // Does this scope access "arguments".
+   bool uses_arguments() const { return scope_uses_arguments_; }
+   // Does any inner scope access "arguments".
+   bool inner_uses_arguments() const { return inner_scope_uses_arguments_; }
++  // Does this scope access "super".
++  bool uses_super() const { return scope_uses_super_; }
++  // Does any inner scope access "super".
++  bool inner_uses_super() const { return inner_scope_uses_super_; }
++  // Does this scope access "this".
++  bool uses_this() const { return scope_uses_this_; }
++  // Does any inner scope access "this".
++  bool inner_uses_this() const { return inner_scope_uses_this_; }
+
+   // ---------------------------------------------------------------------------
+   // Accessors.
+@@ -486,10 +493,12 @@ class Scope: public ZoneObject {
+   // This scope or a nested catch scope or with scope contain an 'eval' call. At
+   // the 'eval' call site this scope is the declaration scope.
+   bool scope_calls_eval_;
+-  // This scope uses "this".
+-  bool scope_uses_this_;
+   // This scope uses "arguments".
+   bool scope_uses_arguments_;
++  // This scope uses "super".
++  bool scope_uses_super_;
++  // This scope uses "this".
++  bool scope_uses_this_;
+   // This scope contains an "use asm" annotation.
+   bool asm_module_;
+   // This scope's outer context is an asm module.
+@@ -503,8 +512,9 @@ class Scope: public ZoneObject {
+   // Computed via PropagateScopeInfo.
+   bool outer_scope_calls_sloppy_eval_;
+   bool inner_scope_calls_eval_;
+-  bool inner_scope_uses_this_;
+   bool inner_scope_uses_arguments_;
++  bool inner_scope_uses_super_;
++  bool inner_scope_uses_this_;
+   bool force_eager_compilation_;
+   bool force_context_allocation_;
+
+Index: src/x64/full-codegen-x64.cc
+diff --git a/src/x64/full-codegen-x64.cc b/src/x64/full-codegen-x64.cc
+index 25bfd340294e2f7aa9a84a6b336748ad9e4f4f35..cbee082060ee1b99e0d3c61031f885f58071e3da 100644
+--- a/src/x64/full-codegen-x64.cc
++++ b/src/x64/full-codegen-x64.cc
+@@ -1341,6 +1341,19 @@ void FullCodeGenerator::EmitLoadHomeObject(SuperReference* expr) {
+ }
+
+
++void FullCodeGenerator::EmitSetHomeObjectIfNeeded(Expression* initializer,
++                                                  int offset) {
++  if (NeedsHomeObject(initializer)) {
++    __ movp(StoreDescriptor::ReceiverRegister(), Operand(rsp, 0));
++    __ Move(StoreDescriptor::NameRegister(),
++            isolate()->factory()->home_object_symbol());
++    __ movp(StoreDescriptor::ValueRegister(),
++            Operand(rsp, offset * kPointerSize));
++    CallStoreIC();
++  }
++}
++
++
+ void FullCodeGenerator::EmitLoadGlobalCheckExtensions(VariableProxy* proxy,
+                                                       TypeofState typeof_state,
+                                                       Label* slow) {
+@@ -1704,6 +1717,14 @@ void FullCodeGenerator::VisitObjectLiteral(ObjectLiteral* expr) {
+             __ movp(StoreDescriptor::ReceiverRegister(), Operand(rsp, 0));
+             CallStoreIC(key->LiteralFeedbackId());
+             PrepareForBailoutForId(key->id(), NO_REGISTERS);
++
++            if (NeedsHomeObject(value)) {
++              __ movp(StoreDescriptor::ReceiverRegister(), rax);
++              __ Move(StoreDescriptor::NameRegister(),
++                      isolate()->factory()->home_object_symbol());
++              __ movp(StoreDescriptor::ValueRegister(), Operand(rsp, 0));
++              CallStoreIC();
++            }
+           } else {
+             VisitForEffect(value);
+           }
+@@ -1713,6 +1734,7 @@ void FullCodeGenerator::VisitObjectLiteral(ObjectLiteral* expr) {
+         VisitForStackValue(key);
+         VisitForStackValue(value);
+         if (property->emit_store()) {
++          EmitSetHomeObjectIfNeeded(value, 2);
+           __ Push(Smi::FromInt(SLOPPY));  // Strict mode
+           __ CallRuntime(Runtime::kSetProperty, 4);
+         } else {
+@@ -1745,7 +1767,9 @@ void FullCodeGenerator::VisitObjectLiteral(ObjectLiteral* expr) {
+     __ Push(Operand(rsp, 0));  // Duplicate receiver.
+     VisitForStackValue(it->first);
+     EmitAccessor(it->second->getter);
++    EmitSetHomeObjectIfNeeded(it->second->getter, 2);
+     EmitAccessor(it->second->setter);
++    EmitSetHomeObjectIfNeeded(it->second->setter, 3);
+     __ Push(Smi::FromInt(NONE));
+     __ CallRuntime(Runtime::kDefineAccessorPropertyUnchecked, 5);
+   }
+@@ -2447,6 +2471,7 @@ void FullCodeGenerator::EmitClassDefineProperties(ClassLiteral* lit) {
+     }
+     VisitForStackValue(key);
+     VisitForStackValue(value);
++    EmitSetHomeObjectIfNeeded(value, 2);
+
+     switch (property->kind()) {
+       case ObjectLiteral::Property::CONSTANT:
+Index: test/cctest/test-parsing.cc
+diff --git a/test/cctest/test-parsing.cc b/test/cctest/test-parsing.cc
+index 79d76546e90b117404d191bcf59bfa2f33ec5c20..7a07eab6d5afdd97ae32ef8f4e6f1a95c985ccd0 100644
+--- a/test/cctest/test-parsing.cc
++++ b/test/cctest/test-parsing.cc
+@@ -919,7 +919,7 @@ static int Utf8LengthHelper(const char* s) {
+ }
+
+
+-TEST(ScopeUsesThisAndArguments) {
++TEST(ScopeUsesArgumentsSuperThis) {
+   static const struct {
+     const char* prefix;
+     const char* suffix;
+@@ -928,62 +928,66 @@ TEST(ScopeUsesThisAndArguments) {
+     { "var f = () => {", "}" },
+   };
+
++  enum Expected {
++    NONE = 0,
++    ARGUMENTS = 1,
++    SUPER = 2,
++    THIS = 4,
++    INNER_ARGUMENTS = 8,
++    INNER_SUPER = 16,
++    INNER_THIS = 32
++  };
++
+   static const struct {
+     const char* body;
+-    bool uses_this;
+-    bool uses_arguments;
+-    bool inner_uses_this;
+-    bool inner_uses_arguments;
++    int expected;
+   } source_data[] = {
+-    { "",
+-      false, false, false, false },
+-    { "return this",
+-      true, false, false, false },
+-    { "return arguments",
+-      false, true, false, false },
+-    { "return arguments[0]",
+-      false, true, false, false },
+-    { "return this + arguments[0]",
+-      true, true, false, false },
+-    { "return x => this + x",
+-      false, false, true, false },
+-    { "this.foo = 42;",
+-      true, false, false, false },
+-    { "this.foo();",
+-      true, false, false, false },
+-    { "if (foo()) { this.f() }",
+-      true, false, false, false },
+-    { "if (arguments.length) { this.f() }",
+-      true, true, false, false },
+-    { "while (true) { this.f() }",
+-      true, false, false, false },
+-    { "if (true) { while (true) this.foo(arguments) }",
+-      true, true, false, false },
+-    // Multiple nesting levels must work as well.
+-    { "while (true) { while (true) { while (true) return this } }",
+-      true, false, false, false },
+-    { "if (1) { return () => { while (true) new this() } }",
+-      false, false, true, false },
+-    // Note that propagation of the inner_uses_this() value does not
+-    // cross boundaries of normal functions onto parent scopes.
+-    { "return function (x) { return this + x }",
+-      false, false, false, false },
+-    { "var x = function () { this.foo = 42 };",
+-      false, false, false, false },
+-    { "if (1) { return function () { while (true) new this() } }",
+-      false, false, false, false },
+-    { "return function (x) { return () => this }",
+-      false, false, false, false },
+-    // Flags must be correctly set when using block scoping.
+-    { "\"use strict\"; while (true) { let x; this, arguments; }",
+-      false, false, true, true },
+-    { "\"use strict\"; if (foo()) { let x; this.f() }",
+-      false, false, true, false },
+-    { "\"use strict\"; if (1) {"
+-      "  let x; return function () { return this + arguments }"
+-      "}",
+-      false, false, false, false },
+-  };
++        {"", NONE},
++        {"return this", THIS},
++        {"return arguments", ARGUMENTS},
++        {"return super()", SUPER},
++        {"return super.x", SUPER},
++        {"return arguments[0]", ARGUMENTS},
++        {"return this + arguments[0]", ARGUMENTS | THIS},
++        {"return this + arguments[0] + super.x", ARGUMENTS | SUPER | THIS},
++        {"return x => this + x", INNER_THIS},
++        {"return x => super() + x", INNER_SUPER},
++        {"this.foo = 42;", THIS},
++        {"this.foo();", THIS},
++        {"if (foo()) { this.f() }", THIS},
++        {"if (foo()) { super.f() }", SUPER},
++        {"if (arguments.length) { this.f() }", ARGUMENTS | THIS},
++        {"while (true) { this.f() }", THIS},
++        {"while (true) { super.f() }", SUPER},
++        {"if (true) { while (true) this.foo(arguments) }", ARGUMENTS | THIS},
++        // Multiple nesting levels must work as well.
++        {"while (true) { while (true) { while (true) return this } }", THIS},
++        {"while (true) { while (true) { while (true) return super() } }",
++         SUPER},
++        {"if (1) { return () => { while (true) new this() } }", INNER_THIS},
++        {"if (1) { return () => { while (true) new super() } }", INNER_SUPER},
++        // Note that propagation of the inner_uses_this() value does not
++        // cross boundaries of normal functions onto parent scopes.
++        {"return function (x) { return this + x }", NONE},
++        {"return function (x) { return super() + x }", NONE},
++        {"var x = function () { this.foo = 42 };", NONE},
++        {"var x = function () { super.foo = 42 };", NONE},
++        {"if (1) { return function () { while (true) new this() } }", NONE},
++        {"if (1) { return function () { while (true) new super() } }", NONE},
++        {"return function (x) { return () => this }", NONE},
++        {"return function (x) { return () => super() }", NONE},
++        // Flags must be correctly set when using block scoping.
++        {"\"use strict\"; while (true) { let x; this, arguments; }",
++         INNER_ARGUMENTS | INNER_THIS},
++        {"\"use strict\"; while (true) { let x; this, super(), arguments; }",
++         INNER_ARGUMENTS | INNER_SUPER | INNER_THIS},
++        {"\"use strict\"; if (foo()) { let x; this.f() }", INNER_THIS},
++        {"\"use strict\"; if (foo()) { let x; super.f() }", INNER_SUPER},
++        {"\"use strict\"; if (1) {"
++         "  let x; return function () { return this + super() + arguments }"
++         "}",
++         NONE},
++    };
+
+   i::Isolate* isolate = CcTest::i_isolate();
+   i::Factory* factory = isolate->factory();
+@@ -1013,6 +1017,7 @@ TEST(ScopeUsesThisAndArguments) {
+                                          isolate->unicode_cache()};
+       i::Parser parser(&info, &parse_info);
+       parser.set_allow_arrow_functions(true);
++      parser.set_allow_classes(true);
+       parser.set_allow_harmony_scoping(true);
+       info.MarkAsGlobal();
+       parser.Parse();
+@@ -1025,11 +1030,16 @@ TEST(ScopeUsesThisAndArguments) {
+       CHECK_EQ(1, global_scope->inner_scopes()->length());
+
+       i::Scope* scope = global_scope->inner_scopes()->at(0);
+-      CHECK_EQ(source_data[i].uses_this, scope->uses_this());
+-      CHECK_EQ(source_data[i].uses_arguments, scope->uses_arguments());
+-      CHECK_EQ(source_data[i].inner_uses_this, scope->inner_uses_this());
+-      CHECK_EQ(source_data[i].inner_uses_arguments,
++      CHECK_EQ((source_data[i].expected & ARGUMENTS) != 0,
++               scope->uses_arguments());
++      CHECK_EQ((source_data[i].expected & SUPER) != 0, scope->uses_super());
++      CHECK_EQ((source_data[i].expected & THIS) != 0, scope->uses_this());
++      CHECK_EQ((source_data[i].expected & INNER_ARGUMENTS) != 0,
+                scope->inner_uses_arguments());
++      CHECK_EQ((source_data[i].expected & INNER_SUPER) != 0,
++               scope->inner_uses_super());
++      CHECK_EQ((source_data[i].expected & INNER_THIS) != 0,
++               scope->inner_uses_this());
+     }
+   }
+ }
+Index: test/mjsunit/harmony/object-literals-super.js
+diff --git a/test/mjsunit/harmony/object-literals-super.js b/test/mjsunit/harmony/object-literals-super.js
+new file mode 100644
+index 0000000000000000000000000000000000000000..ec22b8a8a32e9609e8893278c1327111e4afd1ad
+--- /dev/null
++++ b/test/mjsunit/harmony/object-literals-super.js
+@@ -0,0 +1,168 @@
++// Copyright 2014 the V8 project authors. All rights reserved.
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++// Flags: --harmony-classes --allow-natives-syntax
++
++
++(function TestHomeObject() {
++  var object = {
++    method() {
++      return super.method();
++    },
++    get getter() {
++      return super.getter;
++    },
++    set setter(v) {
++      super.setter = v;
++    },
++    get accessor() {
++      return super.accessor;
++    },
++    set accessor(v) {
++      super.accessor = v;
++    },
++    property: function() {
++      super.property();
++    },
++    propertyWithParen: (function() {
++      super.property();
++    }),
++    propertyWithParens: ((function() {
++      super.property();
++    })),
++
++    methodNoSuper() {},
++    get getterNoSuper() {},
++    set setterNoSuper(v) {},
++    get accessorNoSuper() {},
++    set accessorNoSuper(v) {},
++    propertyNoSuper: function() {},
++    propertyWithParenNoSuper: (function() {}),
++    propertyWithParensNoSuper: ((function() {}))
++  };
++
++  assertEquals(object, object.method[%HomeObjectSymbol()]);
++  var desc = Object.getOwnPropertyDescriptor(object, 'getter');
++  assertEquals(object, desc.get[%HomeObjectSymbol()]);
++  desc = Object.getOwnPropertyDescriptor(object, 'setter');
++  assertEquals(object, desc.set[%HomeObjectSymbol()]);
++  desc = Object.getOwnPropertyDescriptor(object, 'accessor');
++  assertEquals(object, desc.get[%HomeObjectSymbol()]);
++  assertEquals(object, desc.set[%HomeObjectSymbol()]);
++  assertEquals(object, object.property[%HomeObjectSymbol()]);
++  assertEquals(object, object.propertyWithParen[%HomeObjectSymbol()]);
++  assertEquals(object, object.propertyWithParens[%HomeObjectSymbol()]);
++
++  assertEquals(undefined, object.methodNoSuper[%HomeObjectSymbol()]);
++  desc = Object.getOwnPropertyDescriptor(object, 'getterNoSuper');
++  assertEquals(undefined, desc.get[%HomeObjectSymbol()]);
++  desc = Object.getOwnPropertyDescriptor(object, 'setterNoSuper');
++  assertEquals(undefined, desc.set[%HomeObjectSymbol()]);
++  desc = Object.getOwnPropertyDescriptor(object, 'accessorNoSuper');
++  assertEquals(undefined, desc.get[%HomeObjectSymbol()]);
++  assertEquals(undefined, desc.set[%HomeObjectSymbol()]);
++  assertEquals(undefined, object.propertyNoSuper[%HomeObjectSymbol()]);
++  assertEquals(undefined, object.propertyWithParenNoSuper[%HomeObjectSymbol()]);
++  assertEquals(undefined,
++               object.propertyWithParensNoSuper[%HomeObjectSymbol()]);
++})();
++
++
++(function TestMethod() {
++  var object = {
++    __proto__: {
++      method(x) {
++        return 'proto' + x;
++      }
++    },
++    method(x) {
++      return super.method(x);
++    }
++  };
++  assertEquals('proto42', object.method(42));
++})();
++
++
++(function TestGetter() {
++  var object = {
++    __proto__: {
++      _x: 42,
++      get x() {
++        return 'proto' + this._x;
++      }
++    },
++    get x() {
++      return super.x;
++    }
++  };
++  assertEquals('proto42', object.x);
++})();
++
++
++(function TestSetter() {
++  var object = {
++    __proto__: {
++      _x: 0,
++      set x(v) {
++        return this._x = v;
++      }
++    },
++    set x(v) {
++      super.x = v;
++    }
++  };
++  assertEquals(1, object.x = 1);
++  assertEquals(1, object._x);
++  assertEquals(0, Object.getPrototypeOf(object)._x);
++})();
++
++
++(function TestMethodAsProperty() {
++  var object = {
++    __proto__: {
++      method: function(x) {
++        return 'proto' + x;
++      }
++    },
++    method: function(x) {
++      return super.method(x);
++    }
++  };
++  assertEquals('proto42', object.method(42));
++})();
++
++
++(function TestOptimized() {
++  // Object literals without any accessors get optimized.
++  var object = {
++    method() {
++      return super.toString;
++    }
++  };
++  assertEquals(Object.prototype.toString, object.method());
++})();
++
++
++(function TestConciseGenerator() {
++  var o = {
++    __proto__: {
++      m() {
++        return 42;
++      }
++    },
++    *g() {
++      yield super.m();
++    },
++    g2: function*() {
++      yield super.m() + 1;
++    },
++    g3: (function*() {
++      yield super.m() + 2;
++    })
++  };
++
++  assertEquals(42, o.g().next().value);
++  assertEquals(43, o.g2().next().value);
++  assertEquals(44, o.g3().next().value);
++})();
+Index: test/mjsunit/mjsunit.status
+diff --git a/test/mjsunit/mjsunit.status b/test/mjsunit/mjsunit.status
+index 0ab7289b8c0cc4a4e74ca5b4ff985ac05c5338e8..e655a5ae767d6322d73c5c252a43fb59bfd9b38a 100644
+--- a/test/mjsunit/mjsunit.status
++++ b/test/mjsunit/mjsunit.status
+@@ -124,6 +124,9 @@
+   'regress/regress-crbug-259300': [PASS, NO_VARIANTS],
+   'regress/regress-frame-details-null-receiver': [PASS, NO_VARIANTS],
+
++  # TODO(arv): TurboFan does not yet add [[HomeObject]] as needed.
++  'harmony/object-literals-super': [PASS, NO_VARIANTS],
++
+   ##############################################################################
+   # Too slow in debug mode with --stress-opt mode.
+   'compiler/regress-stacktrace-methods': [PASS, ['mode == debug', SKIP]],
