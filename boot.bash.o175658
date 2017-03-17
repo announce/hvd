@@ -1,0 +1,176 @@
+Warning: no access to tty (Bad file descriptor).
+Thus no job control in this shell.
+/var/spool/PBS/mom_priv/jobs/175658.hpcc-con.SC: line 7: module: command not found
+/var/spool/PBS/mom_priv/jobs/175658.hpcc-con.SC: line 8: conda: command not found
+/var/spool/PBS/mom_priv/jobs/175658.hpcc-con.SC: line 9: activate: No such file or directory
+/home/s1510756/py27/lib/python2.7/site-packages/pip/commands/install.py:194: UserWarning: Disabling all use of wheels due to the use of --build-options / --global-options / --install-options.
+  cmdoptions.check_install_build_global(options)
+Collecting enum34==1.1.2 (from -r /home/s1510756/hpcc/requirements.txt (line 1))
+  Using cached enum34-1.1.2.tar.gz
+Requirement already satisfied: matplotlib==1.5.1 in ./py27/lib/python2.7/site-packages (from -r /home/s1510756/hpcc/requirements.txt (line 2))
+Requirement already satisfied: numpy==1.10.4 in ./py27/lib/python2.7/site-packages (from -r /home/s1510756/hpcc/requirements.txt (line 3))
+Collecting scipy==0.17.0 (from -r /home/s1510756/hpcc/requirements.txt (line 4))
+  Using cached scipy-0.17.0.tar.gz
+Collecting scikit-learn==0.17.1 (from -r /home/s1510756/hpcc/requirements.txt (line 5))
+  Using cached scikit-learn-0.17.1.tar.gz
+Collecting unidiff==0.5.2 (from -r /home/s1510756/hpcc/requirements.txt (line 6))
+  Using cached unidiff-0.5.2.tar.gz
+Requirement already satisfied: python-dateutil in ./py27/lib/python2.7/site-packages (from matplotlib==1.5.1->-r /home/s1510756/hpcc/requirements.txt (line 2))
+Requirement already satisfied: pytz in ./py27/lib/python2.7/site-packages (from matplotlib==1.5.1->-r /home/s1510756/hpcc/requirements.txt (line 2))
+Requirement already satisfied: cycler in ./py27/lib/python2.7/site-packages (from matplotlib==1.5.1->-r /home/s1510756/hpcc/requirements.txt (line 2))
+Requirement already satisfied: pyparsing!=2.0.4,>=1.5.6 in ./py27/lib/python2.7/site-packages (from matplotlib==1.5.1->-r /home/s1510756/hpcc/requirements.txt (line 2))
+Requirement already satisfied: six>=1.5 in ./py27/lib/python2.7/site-packages (from python-dateutil->matplotlib==1.5.1->-r /home/s1510756/hpcc/requirements.txt (line 2))
+Skipping bdist_wheel for enum34, due to binaries being disabled for it.
+Skipping bdist_wheel for scipy, due to binaries being disabled for it.
+Skipping bdist_wheel for scikit-learn, due to binaries being disabled for it.
+Skipping bdist_wheel for unidiff, due to binaries being disabled for it.
+Installing collected packages: enum34, scipy, scikit-learn, unidiff
+  Running setup.py install for enum34: started
+    Running setup.py install for enum34: finished with status 'done'
+  Running setup.py install for scipy: started
+    Running setup.py install for scipy: finished with status 'error'
+    Complete output from command /home/s1510756/py27/bin/python -u -c "import setuptools, tokenize;__file__='/var/tmp/pbs.175658.hpcc-con/pip-build-xEsRwE/scipy/setup.py';f=getattr(tokenize, 'open', open)(__file__);code=f.read().replace('\r\n', '\n');f.close();exec(compile(code, __file__, 'exec'))" build_ext "-L /home/s1510756/lib64 -I /home/s1510756/lib/libffi-3.2.1/include" install --record /var/tmp/pbs.175658.hpcc-con/pip-t8ao5A-record/install-record.txt --single-version-externally-managed --compile:
+    lapack_opt_info:
+    openblas_lapack_info:
+      libraries openblas not found in ['/home/s1510756/py27/lib', '/usr/local/lib64', '/usr/local/lib', '/usr/lib64', '/usr/lib']
+      NOT AVAILABLE
+    
+    lapack_mkl_info:
+    mkl_info:
+      libraries mkl,vml,guide not found in ['/opt/intel/composer_xe_2015.3.187/mkl/lib/intel64']
+      NOT AVAILABLE
+    
+      NOT AVAILABLE
+    
+    atlas_3_10_threads_info:
+    Setting PTATLAS=ATLAS
+      libraries tatlas,tatlas not found in /home/s1510756/py27/lib
+      libraries lapack_atlas not found in /home/s1510756/py27/lib
+      libraries tatlas,tatlas not found in /usr/local/lib64
+      libraries lapack_atlas not found in /usr/local/lib64
+      libraries tatlas,tatlas not found in /usr/local/lib
+      libraries lapack_atlas not found in /usr/local/lib
+      libraries tatlas,tatlas not found in /usr/lib64/atlas
+      libraries lapack_atlas not found in /usr/lib64/atlas
+      libraries tatlas,tatlas not found in /usr/lib64/sse2
+      libraries lapack_atlas not found in /usr/lib64/sse2
+      libraries tatlas,tatlas not found in /usr/lib64
+      libraries lapack_atlas not found in /usr/lib64
+      libraries tatlas,tatlas not found in /usr/lib
+      libraries lapack_atlas not found in /usr/lib
+    <class 'numpy.distutils.system_info.atlas_3_10_threads_info'>
+      NOT AVAILABLE
+    
+    atlas_3_10_info:
+      libraries satlas,satlas not found in /home/s1510756/py27/lib
+      libraries lapack_atlas not found in /home/s1510756/py27/lib
+      libraries satlas,satlas not found in /usr/local/lib64
+      libraries lapack_atlas not found in /usr/local/lib64
+      libraries satlas,satlas not found in /usr/local/lib
+      libraries lapack_atlas not found in /usr/local/lib
+      libraries satlas,satlas not found in /usr/lib64/atlas
+      libraries lapack_atlas not found in /usr/lib64/atlas
+      libraries satlas,satlas not found in /usr/lib64/sse2
+      libraries lapack_atlas not found in /usr/lib64/sse2
+      libraries satlas,satlas not found in /usr/lib64
+      libraries lapack_atlas not found in /usr/lib64
+      libraries satlas,satlas not found in /usr/lib
+      libraries lapack_atlas not found in /usr/lib
+    <class 'numpy.distutils.system_info.atlas_3_10_info'>
+      NOT AVAILABLE
+    
+    atlas_threads_info:
+    Setting PTATLAS=ATLAS
+      libraries ptf77blas,ptcblas,atlas not found in /home/s1510756/py27/lib
+      libraries lapack_atlas not found in /home/s1510756/py27/lib
+      libraries ptf77blas,ptcblas,atlas not found in /usr/local/lib64
+      libraries lapack_atlas not found in /usr/local/lib64
+      libraries ptf77blas,ptcblas,atlas not found in /usr/local/lib
+      libraries lapack_atlas not found in /usr/local/lib
+      libraries ptf77blas,ptcblas,atlas not found in /usr/lib64/atlas
+      libraries lapack_atlas not found in /usr/lib64/atlas
+      libraries ptf77blas,ptcblas,atlas not found in /usr/lib64/sse2
+      libraries lapack_atlas not found in /usr/lib64/sse2
+      libraries ptf77blas,ptcblas,atlas not found in /usr/lib64
+      libraries lapack_atlas not found in /usr/lib64
+      libraries ptf77blas,ptcblas,atlas not found in /usr/lib
+      libraries lapack_atlas not found in /usr/lib
+    <class 'numpy.distutils.system_info.atlas_threads_info'>
+      NOT AVAILABLE
+    
+    atlas_info:
+      libraries f77blas,cblas,atlas not found in /home/s1510756/py27/lib
+      libraries lapack_atlas not found in /home/s1510756/py27/lib
+      libraries f77blas,cblas,atlas not found in /usr/local/lib64
+      libraries lapack_atlas not found in /usr/local/lib64
+      libraries f77blas,cblas,atlas not found in /usr/local/lib
+      libraries lapack_atlas not found in /usr/local/lib
+      libraries f77blas,cblas,atlas not found in /usr/lib64/atlas
+      libraries lapack_atlas not found in /usr/lib64/atlas
+      libraries f77blas,cblas,atlas not found in /usr/lib64/sse2
+      libraries lapack_atlas not found in /usr/lib64/sse2
+      libraries f77blas,cblas,atlas not found in /usr/lib64
+      libraries lapack_atlas not found in /usr/lib64
+      libraries f77blas,cblas,atlas not found in /usr/lib
+      libraries lapack_atlas not found in /usr/lib
+    <class 'numpy.distutils.system_info.atlas_info'>
+      NOT AVAILABLE
+    
+    /home/s1510756/py27/lib/python2.7/site-packages/numpy/distutils/system_info.py:1552: UserWarning:
+        Atlas (http://math-atlas.sourceforge.net/) libraries not found.
+        Directories to search for the libraries can be specified in the
+        numpy/distutils/site.cfg file (section [atlas]) or by setting
+        the ATLAS environment variable.
+      warnings.warn(AtlasNotFoundError.__doc__)
+    lapack_info:
+      libraries lapack not found in ['/home/s1510756/py27/lib', '/usr/local/lib64', '/usr/local/lib', '/usr/lib64', '/usr/lib']
+      NOT AVAILABLE
+    
+    /home/s1510756/py27/lib/python2.7/site-packages/numpy/distutils/system_info.py:1563: UserWarning:
+        Lapack (http://www.netlib.org/lapack/) libraries not found.
+        Directories to search for the libraries can be specified in the
+        numpy/distutils/site.cfg file (section [lapack]) or by setting
+        the LAPACK environment variable.
+      warnings.warn(LapackNotFoundError.__doc__)
+    lapack_src_info:
+      NOT AVAILABLE
+    
+    /home/s1510756/py27/lib/python2.7/site-packages/numpy/distutils/system_info.py:1566: UserWarning:
+        Lapack (http://www.netlib.org/lapack/) sources not found.
+        Directories to search for the sources can be specified in the
+        numpy/distutils/site.cfg file (section [lapack_src]) or by setting
+        the LAPACK_SRC environment variable.
+      warnings.warn(LapackSrcNotFoundError.__doc__)
+      NOT AVAILABLE
+    
+    Running from scipy source directory.
+    Traceback (most recent call last):
+      File "<string>", line 1, in <module>
+      File "/var/tmp/pbs.175658.hpcc-con/pip-build-xEsRwE/scipy/setup.py", line 265, in <module>
+        setup_package()
+      File "/var/tmp/pbs.175658.hpcc-con/pip-build-xEsRwE/scipy/setup.py", line 262, in setup_package
+        setup(**metadata)
+      File "/home/s1510756/py27/lib/python2.7/site-packages/numpy/distutils/core.py", line 135, in setup
+        config = configuration()
+      File "/var/tmp/pbs.175658.hpcc-con/pip-build-xEsRwE/scipy/setup.py", line 182, in configuration
+        config.add_subpackage('scipy')
+      File "/home/s1510756/py27/lib/python2.7/site-packages/numpy/distutils/misc_util.py", line 1002, in add_subpackage
+        caller_level = 2)
+      File "/home/s1510756/py27/lib/python2.7/site-packages/numpy/distutils/misc_util.py", line 971, in get_subpackage
+        caller_level = caller_level + 1)
+      File "/home/s1510756/py27/lib/python2.7/site-packages/numpy/distutils/misc_util.py", line 908, in _get_configuration_from_setup_py
+        config = setup_module.configuration(*args)
+      File "scipy/setup.py", line 15, in configuration
+        config.add_subpackage('linalg')
+      File "/home/s1510756/py27/lib/python2.7/site-packages/numpy/distutils/misc_util.py", line 1002, in add_subpackage
+        caller_level = 2)
+      File "/home/s1510756/py27/lib/python2.7/site-packages/numpy/distutils/misc_util.py", line 971, in get_subpackage
+        caller_level = caller_level + 1)
+      File "/home/s1510756/py27/lib/python2.7/site-packages/numpy/distutils/misc_util.py", line 908, in _get_configuration_from_setup_py
+        config = setup_module.configuration(*args)
+      File "scipy/linalg/setup.py", line 20, in configuration
+        raise NotFoundError('no lapack/blas resources found')
+    numpy.distutils.system_info.NotFoundError: no lapack/blas resources found
+    
+    ----------------------------------------
+Command "/home/s1510756/py27/bin/python -u -c "import setuptools, tokenize;__file__='/var/tmp/pbs.175658.hpcc-con/pip-build-xEsRwE/scipy/setup.py';f=getattr(tokenize, 'open', open)(__file__);code=f.read().replace('\r\n', '\n');f.close();exec(compile(code, __file__, 'exec'))" build_ext "-L /home/s1510756/lib64 -I /home/s1510756/lib/libffi-3.2.1/include" install --record /var/tmp/pbs.175658.hpcc-con/pip-t8ao5A-record/install-record.txt --single-version-externally-managed --compile" failed with error code 1 in /var/tmp/pbs.175658.hpcc-con/pip-build-xEsRwE/scipy/

@@ -15,3 +15,4 @@ $ conda create --name py27 --file notebooks/conda_requirements.txt
 $ pyenv activate anaconda2-2.5.0/envs/py27
 $ jupyter lab
 ```
+

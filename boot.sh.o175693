@@ -1,0 +1,6 @@
+Warning: no access to tty (Bad file descriptor).
+Thus no job control in this shell.
+Error: prefix already exists: /home/s1510756/py27
+discarding /work/opt/anaconda/py35/bin from PATH
+prepending /home/s1510756/py27/bin to PATH
+Could not open requirements file: [Errno 2] No such file or directory: '/requirements.txt'

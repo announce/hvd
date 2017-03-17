@@ -1,0 +1,22 @@
+Warning: no access to tty (Bad file descriptor).
+Thus no job control in this shell.
+/var/spool/PBS/mom_priv/jobs/175655.hpcc-con.SC: line 7: module: command not found
+/var/spool/PBS/mom_priv/jobs/175655.hpcc-con.SC: line 8: conda: command not found
+/var/spool/PBS/mom_priv/jobs/175655.hpcc-con.SC: line 9: activate: No such file or directory
+/home/s1510756/py27/lib/python2.7/site-packages/pip/commands/install.py:194: UserWarning: Disabling all use of wheels due to the use of --build-options / --global-options / --install-options.
+  cmdoptions.check_install_build_global(options)
+Collecting appnope==0.1.0 (from -r /home/s1510756/hpcc/requirements.txt (line 1))
+  Downloading appnope-0.1.0.tar.gz
+    Complete output from command python setup.py egg_info:
+    Traceback (most recent call last):
+      File "<string>", line 1, in <module>
+      File "/var/tmp/pbs.175655.hpcc-con/pip-build-33vLON/appnope/setup.py", line 17, in <module>
+        raise ValueError("Only meant for install on OS X >= 10.9")
+    ValueError: Only meant for install on OS X >= 10.9
+    
+    ----------------------------------------
+Command "python setup.py egg_info" failed with error code 1 in /var/tmp/pbs.175655.hpcc-con/pip-build-33vLON/appnope/
+Traceback (most recent call last):
+  File "/home/s1510756/hpcc/vcc-combine.py", line 1, in <module>
+    import matplotlib.pyplot as plt
+ImportError: No module named matplotlib.pyplot
