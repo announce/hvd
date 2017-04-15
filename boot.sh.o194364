@@ -1,0 +1,30 @@
+Warning: no access to tty (Bad file descriptor).
+Thus no job control in this shell.
+Error: prefix already exists: /home/s1510756/py27
+discarding /work/opt/anaconda/py35/bin from PATH
+prepending /home/s1510756/py27/bin to PATH
+Requirement already satisfied: enum34==1.1.2 in ./py27/lib/python2.7/site-packages (from -r /home/s1510756/hpcc/requirements.txt (line 1))
+Requirement already satisfied: matplotlib==1.5.1 in ./py27/lib/python2.7/site-packages (from -r /home/s1510756/hpcc/requirements.txt (line 2))
+Requirement already satisfied: numpy==1.10.4 in ./py27/lib/python2.7/site-packages (from -r /home/s1510756/hpcc/requirements.txt (line 3))
+Requirement already satisfied: scipy==0.17.0 in ./py27/lib/python2.7/site-packages (from -r /home/s1510756/hpcc/requirements.txt (line 4))
+Requirement already satisfied: scikit-learn==0.17.1 in ./py27/lib/python2.7/site-packages (from -r /home/s1510756/hpcc/requirements.txt (line 5))
+Requirement already satisfied: unidiff==0.5.2 in ./py27/lib/python2.7/site-packages (from -r /home/s1510756/hpcc/requirements.txt (line 6))
+Requirement already satisfied: psycopg2==2.6.1 in ./py27/lib/python2.7/site-packages (from -r /home/s1510756/hpcc/requirements.txt (line 7))
+Requirement already satisfied: python-dateutil in ./py27/lib/python2.7/site-packages (from matplotlib==1.5.1->-r /home/s1510756/hpcc/requirements.txt (line 2))
+Requirement already satisfied: pytz in ./py27/lib/python2.7/site-packages (from matplotlib==1.5.1->-r /home/s1510756/hpcc/requirements.txt (line 2))
+Requirement already satisfied: cycler in ./py27/lib/python2.7/site-packages (from matplotlib==1.5.1->-r /home/s1510756/hpcc/requirements.txt (line 2))
+Requirement already satisfied: pyparsing!=2.0.4,>=1.5.6 in ./py27/lib/python2.7/site-packages (from matplotlib==1.5.1->-r /home/s1510756/hpcc/requirements.txt (line 2))
+Requirement already satisfied: six>=1.5 in ./py27/lib/python2.7/site-packages (from python-dateutil->matplotlib==1.5.1->-r /home/s1510756/hpcc/requirements.txt (line 2))
+2017-04-12 23:32:29,146 - __main__ - INFO - Started loading data
+Traceback (most recent call last):
+  File "/home/s1510756/hpcc/vcc-combine.py", line 61, in <module>
+    data = fetch('vcc_data_all.npz')
+  File "/home/s1510756/hpcc/vcc-combine.py", line 37, in fetch
+    npz = np.load(filename)
+  File "/home/s1510756/py27/lib/python2.7/site-packages/numpy/lib/npyio.py", line 362, in load
+    fid = open(file, "rb")
+IOError: [Errno 2] No such file or directory: 'vcc_data_all.npz'
+
+real	0m17.134s
+user	0m0.813s
+sys	0m1.155s

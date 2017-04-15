@@ -10,4 +10,4 @@ source activate $HOME/py27
 export _APP_DIR="$HOME/hpcc"
 export DISPLAY=:0
 pip install -r ${_APP_DIR}/requirements.txt \
-  && python ${_APP_DIR}/vcc-combine.py
+  && time python ${_APP_DIR}/vcc-combine.py

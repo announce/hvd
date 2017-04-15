@@ -14,11 +14,10 @@ class Data:
 
 if __name__ == "__main__":
     data = Data("dbname=postgres host=localhost port=55432 user=postgres")
-    rows = data.fetch("SELECT * FROM export.commits")
-    np.savez_compressed("var/vcc_data.npz", np.array(rows))
-    #
-    # vcc = data.fetch("SELECT * FROM export.commits WHERE type  = 'blamed_commit' LIMIT 40")
-    # ucc = data.fetch("SELECT * FROM export.commits WHERE type != 'blamed_commit' LIMIT 800")
-    # sample = np.concatenate([vcc, ucc])
-    # np.random.shuffle(sample)
-    # np.savez_compressed("var/vcc_sample_40x800.npz", sample)
+    # rows = data.fetch("SELECT * FROM export.commits")
+    # np.savez_compressed("var/vcc_data.npz", np.array(rows))
+    vcc = data.fetch("SELECT * FROM export.commits WHERE type  = 'blamed_commit'")
+    ucc = data.fetch("SELECT * FROM export.commits WHERE type != 'blamed_commit'")
+    sample = np.concatenate([vcc, ucc])
+    np.random.shuffle(sample)
+    np.savez_compressed("var/vcc_sample_all.npz", sample)
