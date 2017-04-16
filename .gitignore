@@ -15,11 +15,12 @@ dist/
 downloads/
 eggs/
 .eggs/
-vccf/
+lib/
 lib64/
 parts/
 sdist/
 var/
+logs/
 *.egg-info/
 .installed.cfg
 *.egg

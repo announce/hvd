@@ -1,5 +1,0 @@
-Warning: no access to tty (Bad file descriptor).
-Thus no job control in this shell.
-Error: did not expect more than one argument.
-./boot.bash: line 6: syntax error near unexpected token `&&'
-./boot.bash: line 6: `  && pip install -r ${APP_DIR}/requirements.txt \'
