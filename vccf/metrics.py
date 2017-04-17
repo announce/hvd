@@ -1,4 +1,5 @@
 import numpy as np
+import pandas
 from logger import Logger
 from column import Column
 
@@ -9,16 +10,18 @@ class Metrics:
         self.logger = Logger.create(name=__name__)
         self.data = data
 
-    def vectroize(self):
-        # Now X is sparse array looks like:
-        # [[0 0 0 ..., 0 0 0]
-        #  [0 0 0 ..., 0 0 0]
-        #  [0 0 0 ..., 0 0 0]
-        #  ...,
-        #  [0 0 0 ..., 0 0 0]
-        #  [0 0 0 ..., 0 0 0]
-        #  [0 0 0 ..., 0 0 0]]
+    @classmethod
+    def bin(cls, arr):
+        return np.ceil(np.log1p(arr))
 
+    @classmethod
+    def flag(cls, a, **kwargs):
+        l = [(kwargs['col'][i] == v).astype(int) for i, v in enumerate(a)]
+        return [item for sublist in l for item in sublist]
+
+    def create_vector(self):
+        # @TODO Column.author_contributions_percent,
+        # Corrupt data (all 0): Column.files_changed
         # Bind metrics from Git metadata
         target_metrics = map(lambda n: n-1, [
             Column.additions,
@@ -26,20 +29,20 @@ class Metrics:
             Column.past_different_authors,
             Column.future_different_authors,
             Column.hunk_count,
-            Column.files_changed,
         ])
-
-        # @TODO Column.author_contributions_percent,
         metrics_data = np.array([row[target_metrics] for row in self.data])
-        # Now combined X2 looks like
-        # [[3L 66L 7L ..., 0L 0L 0L]
-        #  [54L 23L 6L ..., 0L 0L 0L]
-        #  [3L 1L 12L ..., 0L 0L 0L]
+        bin_metrics = self.bin(metrics_data.astype(float)).astype(int)
+        # print bin_metrics
+        # [[2 5 3 4 3]
+        #  [5 4 2 3 3]
+        #  [2 1 3 3 1]
         #  ...,
-        #  [1L 2L 1L ..., 0L 0L 0L]
-        #  [46L 21L 0L ..., 0L 0L 0L]
-        #  [32L 12L 42L ..., 0L 0L 0L]]
-        return metrics_data
+        #  [1 2 1 3 1]
+        #  [4 4 0 6 3]
+        #  [4 3 4 4 3]]
+        col = np.asarray([np.unique(bin_metrics[:, i]) for i in np.arange(bin_metrics.shape[1])])
+        return np.apply_along_axis(self.flag, axis=1, arr=bin_metrics, col=col)
+        # return bin_metrics
 
 
 if __name__ == '__main__':

@@ -1,7 +1,4 @@
-import matplotlib
-matplotlib.use('Agg')
-# matplotlib.use('SVG')
-import matplotlib.pyplot as plt
+
 from sklearn.metrics import precision_recall_curve
 from sklearn.metrics import average_precision_score
 from sklearn.cross_validation import train_test_split
@@ -18,6 +15,10 @@ from vccf.patch_normalizer import PatchNormalizer
 from vccf.metrics import Metrics
 from vccf.column import Column
 from vccf.data import Data
+
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 
 
 logger = Logger.create(name=__name__)
@@ -36,9 +37,17 @@ normalized_patches = PatchNormalizer().normalize_patches(patches)
 vectorizer = CountVectorizer(min_df=2, stop_words=None)
 X = vectorizer.fit_transform(normalized_patches)
 # feature_names = vectorizer.get_feature_names()
+# Now X is sparse array looks like:
+# [[0 0 0 ..., 0 0 0]
+#  [0 0 0 ..., 0 0 0]
+#  [0 0 0 ..., 0 0 0]
+#  ...,
+#  [0 0 0 ..., 0 0 0]
+#  [0 0 0 ..., 0 0 0]
+#  [0 0 0 ..., 0 0 0]]
 
-metrics = Metrics(data).vectroize()
-X2 = sparse.hstack((metrics.astype(float), X))
+metrics = Metrics(data).create_vector()
+X2 = sparse.hstack((metrics, X))
 
 y = is_vcc = (labels == 'blamed_commit')
 
