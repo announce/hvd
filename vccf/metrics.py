@@ -1,5 +1,4 @@
 import numpy as np
-import pandas
 from logger import Logger
 from column import Column
 
@@ -40,9 +39,9 @@ class Metrics:
         #  [1 2 1 3 1]
         #  [4 4 0 6 3]
         #  [4 3 4 4 3]]
-        col = np.asarray([np.unique(bin_metrics[:, i]) for i in np.arange(bin_metrics.shape[1])])
-        return np.apply_along_axis(self.flag, axis=1, arr=bin_metrics, col=col)
-        # return bin_metrics
+        # col = np.asarray([np.unique(bin_metrics[:, i]) for i in np.arange(bin_metrics.shape[1])])
+        # return np.apply_along_axis(self.flag, axis=1, arr=bin_metrics, col=col)
+        return bin_metrics
 
 
 if __name__ == '__main__':

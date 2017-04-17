@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#PBS -j oe -l select=1 -M s1510756@jaist.ac.jp
+#PBS -j oe -l select=1 -M s1510756@jaist.ac.jp -m e
 
 cd $PBS_O_WORKDIR
 
@@ -10,4 +10,5 @@ source activate $HOME/py27
 export _APP_DIR="$HOME/hpcc"
 export DISPLAY=:0
 pip install -r ${_APP_DIR}/requirements.txt \
-  && time python ${_APP_DIR}/vcc-combine.py
+  && time python ${_APP_DIR}/vcc-combine.py \
+  && mv {figure_*.png,boot.sh.o*} logs/

@@ -23,9 +23,9 @@ import matplotlib.pyplot as plt
 
 logger = Logger.create(name=__name__)
 logger.info('Started loading data')
-data = Data.load('vcc_sample_40x800.npz')
+# data = Data.load('vcc_sample_40x800.npz')
 # data = Data.load('vcc_data.npz')
-# data = Data.load('vcc_sample_all.npz')
+data = Data.load('vcc_sample_all.npz')
 logger.info('Data loaded #%d' % len(data))
 
 patches = data[:, Column.patch]
@@ -76,6 +76,6 @@ plt.ylim([0.0, 1.05])
 plt.xlim([0.0, 1.0])
 plt.title('Precision-Recall example: AUC={0:0.2f}'.format(average_precision[0]))
 plt.legend(loc="lower left")
-plt.savefig("logs/figure_%s" % datetime.now().strftime('%s'))
+plt.savefig("figure_%s" % datetime.now().strftime('%s'))
 
 logger.info(average_precision)

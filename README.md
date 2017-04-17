@@ -17,14 +17,15 @@ $ jupyter lab
 ```
 
 #### HPCC
+Add `#PBS -j oe -l select=1 -M s1510756@jaist.ac.jp -m e
+`
 ```
 # Interactive mode
 qsub -I -q SINGLE
 # Enqueue task
 qsub boot.sh
 # Watch task
-bash
-watch -n 10 qstat -a -u $USER
+bash -c 'watch -n 10 qstat -a -u $USER'
 ```
 
 #### TODO
