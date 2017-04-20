@@ -23,9 +23,9 @@ import matplotlib.pyplot as plt
 
 logger = Logger.create(name=__name__)
 logger.info('Started loading data')
-# data = Data.load('vcc_sample_40x800.npz')
+data = Data.load('vcc_sample_40x800.npz')
 # data = Data.load('vcc_data.npz')
-data = Data.load('vcc_sample_all.npz')
+# data = Data.load('vcc_sample_all.npz')
 logger.info('Data loaded #%d' % len(data))
 
 patches = data[:, Column.patch]
@@ -33,10 +33,11 @@ labels = data[:, Column.type]
 
 normalized_patches = PatchNormalizer().normalize_patches(patches)
 
-# @TODO: stop_words=[]
 vectorizer = CountVectorizer(min_df=2, stop_words=None)
 X = vectorizer.fit_transform(normalized_patches)
 # feature_names = vectorizer.get_feature_names()
+# print feature_names
+
 # Now X is sparse array looks like:
 # [[0 0 0 ..., 0 0 0]
 #  [0 0 0 ..., 0 0 0]
@@ -55,9 +56,10 @@ y = is_vcc = (labels == 'blamed_commit')
 X_train, X_test, y_train, y_test = train_test_split(X2, y, test_size=0.33, random_state=0)
 
 # Run classifier
-# weight = {0:.01, 1:1}
 weight = {0: 1, 1: .01}
-classifier = LinearSVC(C=1.0, class_weight=weight)
+# weight = {0: .01, 1: .1}
+classifier = LinearSVC(C=1.0, class_weight=weight, loss='hinge')
+# classifier = LinearSVC(C=1.0, class_weight='balanced')
 y_score = classifier.fit(X_train, y_train).decision_function(X_test)
 
 # Compute Precision-Recall and plot curve
