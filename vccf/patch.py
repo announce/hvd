@@ -3,20 +3,27 @@ from logger import Logger
 from app_error import AppError
 from line_extractor import LineExtractor
 from bow_num import BowNum
+from column import Column
 
 
-class PatchNormalizer:
-    def __init__(self):
+class Patch:
+    def __init__(self, data):
+        """
+        :param data
+        """
+
         self.logger = Logger.create(name=__name__)
         self.bow_num = BowNum()
         self.line_extractor = LineExtractor()
+        self.data = data
 
-    def normalize_patches(self, patches):
+    def normalized(self):
         """
-        :param unicode patches: unicode(patch, 'utf-8')
+        Note that patches are encoded in unicode: unicode(patch, 'utf-8')
         :rtype: unicode
         :return:
         """
+        patches = self.data[:, Column.patch]
         self.logger.info('Start extracting lines...')
         clean_patches = [u''] * len(patches)
         invalid_patches = []

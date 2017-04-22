@@ -1,40 +1,35 @@
 from math import log10, floor
 import numpy as np
-from scipy import sparse
 import pandas as pd
 from logger import Logger
 from column import Column
 
 
 class Metrics:
-    COUNT_BASE = (
-        np.array([
-            Column.additions,
-            Column.deletions,
-            Column.past_changes,
-            Column.past_different_authors,
-            # Column.future_different_authors,
-            Column.hunk_count,
-            Column.forks_count,
-            Column.watchers_count,
-            Column.subscribers_count,
-            Column.open_issues_count,
-            Column.size,
-            Column.distinct_authors_count,
-            Column.commits_count,
-        ]) - 1
-    )
-    DATETIME_BASE = (
-        np.array([
-            Column.author_when,
-            Column.committer_when,
-        ]) - 1
-    )
-    PERCENTAGE_BASE = (
-        np.array([
-            Column.author_contributions_percent,
-        ]) - 1
-    )
+    COUNT_BASE = np.array([
+        Column.additions,
+        Column.deletions,
+        Column.past_changes,
+        Column.past_different_authors,
+        # Column.future_different_authors,
+        Column.hunk_count,
+        Column.forks_count,
+        Column.watchers_count,
+        Column.subscribers_count,
+        Column.open_issues_count,
+        Column.size,
+        Column.distinct_authors_count,
+        Column.commits_count,
+    ])
+
+    DATETIME_BASE = np.array([
+        Column.author_when,
+        Column.committer_when,
+    ])
+
+    PERCENTAGE_BASE = np.array([
+        Column.author_contributions_percent,
+    ])
 
     def __init__(self, data):
         self.logger = Logger.create(name=__name__)

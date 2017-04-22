@@ -11,8 +11,10 @@ import numpy as np
 import scipy as sp
 from datetime import datetime
 from vccf.logger import Logger
-from vccf.patch_normalizer import PatchNormalizer
+from vccf.patch import Patch
+from vccf.message import Message
 from vccf.metrics import Metrics
+from vccf.stop_words import StopWords
 from vccf.column import Column
 from vccf.data import Data
 
@@ -28,14 +30,14 @@ data = Data.load('vcc_data_40x800.npz')
 # data = Data.load('vcc_sample_all.npz')
 logger.info('Data loaded #%d' % len(data))
 
-patches = data[:, Column.patch]
 labels = data[:, Column.type]
 
-# @todo Remove author name, email
-normalized_patches = PatchNormalizer().normalize_patches(patches)
-
+patch = Patch(data).normalized()
+message = Message(data).normalized()
+candidates = [u' '.join([v, message[i]]) for i, v in enumerate(patch)]
+stop_words = StopWords(data).list()
 vectorizer = CountVectorizer(min_df=2, stop_words=None)
-X = vectorizer.fit_transform(normalized_patches)
+X = vectorizer.fit_transform(candidates)
 # feature_names = vectorizer.get_feature_names()
 # print feature_names
 
