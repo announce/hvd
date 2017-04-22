@@ -24,11 +24,31 @@ if __name__ == "__main__":
         left join export.repositories as r
         on c.repository_id = r.id
     """
+    query_vulnerable = """
+        select
+              c.*,
+              r.*
+        from export.commits as c
+        left join export.repositories as r
+        on c.repository_id = r.id
+        where c.type = 'blamed_commit'
+        limit 40;
+    """
+    query_unclassified = """
+        select
+              c.*,
+              r.*
+        from export.commits as c
+        left join export.repositories as r
+        on c.repository_id = r.id
+        where c.type != 'blamed_commit'
+        limit 800;
+    """
     data = Data("dbname=postgres host=localhost port=55432 user=postgres")
-    rows = data.fetch(query_all)
-    np.savez_compressed("var/vcc_data.npz", np.array(rows))
-    # vcc = data.fetch("SELECT * FROM export.commits WHERE type  = 'blamed_commit'")
-    # ucc = data.fetch("SELECT * FROM export.commits WHERE type != 'blamed_commit'")
-    # sample = np.concatenate([vcc, ucc])
-    # np.random.shuffle(sample)
-    # np.savez_compressed("var/vcc_sample_all.npz", sample)
+    # rows = data.fetch(query_all)
+    # np.savez_compressed("var/vcc_data.npz", np.array(rows))
+    vcc = data.fetch(query_vulnerable)
+    ucc = data.fetch(query_unclassified)
+    sample = np.concatenate([vcc, ucc])
+    np.random.shuffle(sample)
+    np.savez_compressed("var/vcc_data_40x800.npz", sample)

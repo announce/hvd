@@ -1,16 +1,40 @@
+from math import log10, floor
 import numpy as np
+from scipy import sparse
+import pandas as pd
 from logger import Logger
 from column import Column
 
 
 class Metrics:
-    COUNT_BASE = [
-        Column.additions,
-        Column.deletions,
-        Column.past_different_authors,
-        # Column.future_different_authors,
-        Column.hunk_count,
-    ]
+    COUNT_BASE = (
+        np.array([
+            Column.additions,
+            Column.deletions,
+            Column.past_changes,
+            Column.past_different_authors,
+            # Column.future_different_authors,
+            Column.hunk_count,
+            Column.forks_count,
+            Column.watchers_count,
+            Column.subscribers_count,
+            Column.open_issues_count,
+            Column.size,
+            Column.distinct_authors_count,
+            Column.commits_count,
+        ]) - 1
+    )
+    DATETIME_BASE = (
+        np.array([
+            Column.author_when,
+            Column.committer_when,
+        ]) - 1
+    )
+    PERCENTAGE_BASE = (
+        np.array([
+            Column.author_contributions_percent,
+        ]) - 1
+    )
 
     def __init__(self, data):
         self.logger = Logger.create(name=__name__)
@@ -21,40 +45,53 @@ class Metrics:
         return np.ceil(np.log1p(arr))
 
     @classmethod
+    def round_sig(cls, x, sig=1):
+        return round(x, sig - int(floor(log10(abs(x)))) - 1)
+
+    @classmethod
     def flag(cls, a, **kwargs):
+        """
+        # col = np.asarray([np.unique(bin_metrics[:, i]) for i in np.arange(bin_metrics.shape[1])])
+        # return np.apply_along_axis(self.flag, axis=1, arr=bin_metrics, col=col)
+        :param a: 
+        :param kwargs: 
+        :return: 
+        """
         l = [(kwargs['col'][i] == v).astype(int) for i, v in enumerate(a)]
         return [item for sublist in l for item in sublist]
+
+    @classmethod
+    def per_to_int(cls, a):
+        return [round(p * 100) for p in a]
+
+    @classmethod
+    def dt_rank(cls, a):
+        return pd.to_datetime(a).astype(int) // 10**16
+
+    def create_count_base(self):
+        metrics = self.data[:, self.COUNT_BASE]
+        return np.apply_along_axis(self.bin, axis=1, arr=metrics.astype(float)).astype(int)
+
+    def create_datetime_base(self):
+        metrics = self.data[:, self.DATETIME_BASE]
+        return np.apply_along_axis(self.dt_rank, axis=0, arr=metrics).astype(int)
+
+    def create_percentage_base(self):
+        metrics = self.data[:, self.PERCENTAGE_BASE]
+        return np.apply_along_axis(self.per_to_int, axis=1, arr=metrics).astype(int)
 
     def create_vector(self):
         """
         Bind metrics from Git metadata
         @TODO
-        Column.author_contributions_percent
-        Number of commits
-        Number of unique contributors
         Commit message - author names and email addresses
-        Star count
-        Fork count
         :return:
         """
-
-        count_base = self.data[:, map(lambda n: n-1, self.COUNT_BASE)]
-        bin_metrics = self.bin(count_base.astype(float)).astype(int)
-
-        # sparse.hstack
-
-        # print bin_metrics
-        # [[2 5 3 4 3]
-        #  [5 4 2 3 3]
-        #  [2 1 3 3 1]
-        #  ...,
-        #  [1 2 1 3 1]
-        #  [4 4 0 6 3]
-        #  [4 3 4 4 3]]
-        # col = np.asarray([np.unique(bin_metrics[:, i]) for i in np.arange(bin_metrics.shape[1])])
-        # return np.apply_along_axis(self.flag, axis=1, arr=bin_metrics, col=col)
-        # return bin_metrics
-        return metrics_data.astype(float)
+        return np.hstack((
+            self.create_count_base(),
+            self.create_datetime_base(),
+            self.create_percentage_base(),
+        ))
 
 
 if __name__ == '__main__':

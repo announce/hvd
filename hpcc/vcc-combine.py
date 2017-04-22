@@ -23,7 +23,7 @@ import matplotlib.pyplot as plt
 
 logger = Logger.create(name=__name__)
 logger.info('Started loading data')
-data = Data.load('vcc_sample_40x800.npz')
+data = Data.load('vcc_data_40x800.npz')
 # data = Data.load('vcc_data.npz')
 # data = Data.load('vcc_sample_all.npz')
 logger.info('Data loaded #%d' % len(data))
@@ -31,6 +31,7 @@ logger.info('Data loaded #%d' % len(data))
 patches = data[:, Column.patch]
 labels = data[:, Column.type]
 
+# @todo Remove author name, email
 normalized_patches = PatchNormalizer().normalize_patches(patches)
 
 vectorizer = CountVectorizer(min_df=2, stop_words=None)

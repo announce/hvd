@@ -33,7 +33,7 @@ class BowNum:
         m = matched.group()
         bin = self.bin_num(float(m))
         if bin == float('Inf'):
-            self.logger.warn('Ignoring \'%s\' (mistakenly matched with scientific \'e\' notation)' % m)
+            self.logger.warn('Ignoring Inf(\'%s\')' % m)
             return m
         else:
             return str(int(bin))

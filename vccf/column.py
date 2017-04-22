@@ -5,8 +5,8 @@ class Column(enum.IntEnum):
     """
     # Corrupt data
     * files_changed: all 0
-
     """
+    # Commits
     _commits_id = 1
     repository_id = 2
     type = 3
@@ -33,6 +33,9 @@ class Column(enum.IntEnum):
     cve = 24
     files_changed = 25
     patch_keywords = 26
+
+    # Repositories
+    # The paper mentions Star count but not exists
     _repositories_id = 27
     name = 28
     description = 29
