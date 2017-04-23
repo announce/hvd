@@ -1,4 +1,4 @@
-import sys
+import sys, os
 from sklearn.metrics import precision_recall_curve
 from sklearn.metrics import average_precision_score
 from sklearn.cross_validation import train_test_split
@@ -37,8 +37,8 @@ class VccCombine:
         message = Message(data).normalized()
         candidates = [u' '.join([v, message[i]]) for i, v in enumerate(patch)]
         # @FIXME stop_words contains invalid data. Maybe need to fix null column.
-        print stop_words
         stop_words = StopWords(data).list()
+        print stop_words
 
         vectorizer = CountVectorizer(min_df=2, stop_words=None)
         X = vectorizer.fit_transform(candidates)
@@ -83,7 +83,11 @@ class VccCombine:
         plt.ylabel('Precision')
         plt.ylim([0.0, 1.05])
         plt.xlim([0.0, 1.0])
-        plt.title('Precision-Recall example: AUC={0:0.2f}'.format(average_precision[0]))
+        plt.title('%s %s: AUC=%.2f' % (
+            self.__class__.__name__,
+            os.path.basename(self.filename),
+            average_precision[0]),
+                  )
         plt.legend(loc="lower left")
         plt.savefig("figure_%s" % datetime.now().strftime('%s'))
         self.logger.info(average_precision)
