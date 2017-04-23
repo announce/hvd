@@ -27,7 +27,3 @@ qsub boot.sh
 # Watch task
 bash -c 'watch -n 10 qstat -a -u $USER'
 ```
-
-#### TODO
-* Now the problem is that output isn't such good percision
-** Try recreating Dada to fix data structure
