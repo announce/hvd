@@ -25,12 +25,10 @@ import matplotlib.pyplot as plt
 
 logger = Logger.create(name=__name__)
 logger.info('Started loading data')
-data = Data.load('vcc_data_40x800.npz')
-# data = Data.load('vcc_data.npz')
-# data = Data.load('vcc_sample_all.npz')
-logger.info('Data loaded #%d' % len(data))
 
-labels = data[:, Column.type]
+# data = Data.load('vcc_data_40x800.npz')
+data = Data.load('vcc_data.npz')
+logger.info('Data loaded #%d' % len(data))
 
 patch = Patch(data).normalized()
 message = Message(data).normalized()
@@ -53,14 +51,14 @@ X = vectorizer.fit_transform(candidates)
 metrics = Metrics(data).create_vector()
 X2 = sparse.hstack((metrics, X))
 
-y = is_vcc = (labels == 'blamed_commit')
+labels = data[:, Column.cve]
+y = is_vcc = (labels != '')
 
 # Split into training and test
 X_train, X_test, y_train, y_test = train_test_split(X2, y, test_size=0.33, random_state=0)
 
 # Run classifier
-weight = {0: 1, 1: .01}
-# weight = {0: .01, 1: .1}
+weight = {0: .01, 1: .1}
 classifier = LinearSVC(C=1.0, class_weight=weight, loss='hinge')
 # classifier = LinearSVC(C=1.0, class_weight='balanced')
 y_score = classifier.fit(X_train, y_train).decision_function(X_test)
