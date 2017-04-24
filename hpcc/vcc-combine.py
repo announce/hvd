@@ -1,13 +1,14 @@
-import sys, os
+import sys
+import os
+from datetime import datetime
 import numpy as np
 import scipy as sp
+from scipy import sparse
 from sklearn.metrics import precision_recall_curve
 from sklearn.metrics import average_precision_score
 from sklearn.model_selection import train_test_split
 from sklearn.svm import LinearSVC
 from sklearn.feature_extraction.text import CountVectorizer
-from scipy import sparse
-from datetime import datetime
 from vccf.logger import Logger
 from vccf.patch import Patch
 from vccf.message import Message
