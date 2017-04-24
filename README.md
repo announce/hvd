@@ -1,6 +1,6 @@
 # notebooks
 
-#### Setup Jupyter on MacBook
+## Setup Jupyter on MacBook
 
 ```
 $ brew install pyenv-virtualenv
@@ -9,21 +9,33 @@ $ conda create --name py27 --file notebooks/conda_requirements.txt
 ```
 
 
-#### Run Jupyter on MacBook
+## Run Jupyter on MacBook
 
 ```
 $ pyenv activate anaconda2-2.5.0/envs/py27
 $ jupyter lab
 ```
 
-#### HPCC
-Add `#PBS -j oe -l select=1 -M s1510756@jaist.ac.jp -m e
-`
+## HPCC
+#### Usage
 ```
 # Interactive mode
 qsub -I -q SINGLE
 # Enqueue task
 qsub boot.sh
-# Watch task
+# Watch task every 10 seconds
 bash -c 'watch -n 10 qstat -a -u $USER'
 ```
+
+#### HPCC resource stats against full size of VCC data
+* CPU time: approx. 16 min
+* CPU cores: 10
+* Memory: 15.373936 GB
+
+
+## Debug
+
+```
+make vcc_debug
+```
+
