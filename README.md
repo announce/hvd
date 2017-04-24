@@ -36,6 +36,6 @@ bash -c 'watch -n 10 qstat -a -u $USER'
 ## Debug
 
 ```
-make vcc_debug
+make vcc_debug && make clean
 ```
 
