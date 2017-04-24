@@ -3,6 +3,7 @@ import os
 from datetime import datetime
 import numpy as np
 import scipy as sp
+import pandas as pd
 from scipy import sparse
 from sklearn.metrics import precision_recall_curve
 from sklearn.metrics import average_precision_score
@@ -50,8 +51,13 @@ class VccCombine:
         metrics = Metrics(data).create_vector()
         X2 = sparse.hstack((metrics, X))
 
-        labels = data[:, Column.cve]
-        y = is_vcc = (labels != '')
+        # labels = data[:, Column.blamed_commit_id]
+        # y = is_vcc = ~pd.isnull(labels).astype(bool)
+
+        labels = data[:, Column.type]
+        y = is_vcc = (labels == 'blamed_commit')
+
+        # print y.shape
 
         # Split into training and test
         X_train, X_test, y_train, y_test = train_test_split(X2, y, test_size=0.33, random_state=0)
