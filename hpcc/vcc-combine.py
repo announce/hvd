@@ -36,11 +36,8 @@ class VccCombine:
         patch = Patch(data).normalized()
         message = Message(data).normalized()
         candidates = [u' '.join([v, message[i]]) for i, v in enumerate(patch)]
-        # @FIXME stop_words contains invalid data. Maybe need to fix null column.
         stop_words = StopWords(data).list()
-        print stop_words
-
-        vectorizer = CountVectorizer(min_df=2, stop_words=None)
+        vectorizer = CountVectorizer(min_df=2, stop_words=stop_words)
         X = vectorizer.fit_transform(candidates)
         # feature_names = vectorizer.get_feature_names()
         # print feature_names

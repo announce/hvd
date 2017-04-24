@@ -4,12 +4,12 @@ from column import Column
 
 
 class StopWords:
-    PROHIBITED_COLUMNS = np.array([
+    SENSITIVE_COLUMNS = [
         Column.author_email,
         Column.author_name,
         Column.committer_email,
-        Column.committer_when,
-    ])
+        Column.committer_name,
+    ]
 
     def __init__(self, data):
         """
@@ -20,10 +20,11 @@ class StopWords:
 
     def list(self):
         """
-        :rtype: numpy.flatiter
+        :rtype: list[str]
         :return:
         """
-        return self.data[:, self.PROHIBITED_COLUMNS].flatten()
+        sensitive_data = self.data[:, self.SENSITIVE_COLUMNS]
+        return np.unique(sensitive_data.flatten()).tolist()
 
 
 if __name__ == '__main__':
