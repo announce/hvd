@@ -38,7 +38,6 @@ class VccCombine:
         candidates = [u' '.join([v, message[i]]) for i, v in enumerate(patch)]
         stop_words = StopWords(data).list()
         vectorizer = CountVectorizer(min_df=1, stop_words=stop_words)
-        self.logger.info("vectorizer = CountVectorizer(min_df=1, stop_words=stop_words)")
         X = vectorizer.fit_transform(candidates)
         # feature_names = vectorizer.get_feature_names()
         # print feature_names
@@ -64,9 +63,7 @@ class VccCombine:
         # Run classifier
         # classifier = LinearSVC(C=1.0, class_weight='balanced')
         weight = {0: .01, 1: .1}
-        # classifier = LinearSVC(C=1.0, class_weight=weight)
         classifier = LinearSVC(C=1.0, class_weight=weight, loss='hinge')
-        self.logger.info("LinearSVC(C=1.0, class_weight=weight, loss='hinge'")
 
         y_score = classifier.fit(X_train, y_train).decision_function(X_test)
 
