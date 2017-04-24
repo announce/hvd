@@ -6,7 +6,7 @@ from column import Column
 
 
 class Metrics:
-    COUNT_BASE = np.array([
+    COUNT_BASE = [
         Column.additions,
         Column.deletions,
         Column.past_changes,
@@ -20,16 +20,16 @@ class Metrics:
         Column.size,
         Column.distinct_authors_count,
         Column.commits_count,
-    ])
+    ]
 
-    DATETIME_BASE = np.array([
+    DATETIME_BASE = [
         Column.author_when,
         Column.committer_when,
-    ])
+    ]
 
-    PERCENTAGE_BASE = np.array([
+    PERCENTAGE_BASE = [
         Column.author_contributions_percent,
-    ])
+    ]
 
     def __init__(self, data):
         self.logger = Logger.create(name=__name__)
