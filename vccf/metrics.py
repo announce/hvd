@@ -60,33 +60,32 @@ class Metrics:
         return [round(p * 100) for p in a]
 
     @classmethod
-    def dt_rank(cls, a):
+    def dt_approx(cls, a):
         return pd.to_datetime(a).astype(int) // 10**16
 
     def create_count_base(self):
         metrics = self.data[:, self.COUNT_BASE]
-        return np.apply_along_axis(self.bin, axis=1, arr=metrics.astype(float)).astype(int)
+        return np.apply_along_axis(self.bin, axis=1, arr=metrics.astype(float))
 
     def create_datetime_base(self):
         metrics = self.data[:, self.DATETIME_BASE]
-        return np.apply_along_axis(self.dt_rank, axis=0, arr=metrics).astype(int)
+        return np.apply_along_axis(self.dt_approx, axis=0, arr=metrics)
 
     def create_percentage_base(self):
         metrics = self.data[:, self.PERCENTAGE_BASE]
-        return np.apply_along_axis(self.per_to_int, axis=1, arr=metrics).astype(int)
+        return np.apply_along_axis(self.per_to_int, axis=1, arr=metrics)
 
     def create_vector(self):
         """
         Bind metrics from Git metadata
-        @TODO
-        Commit message - author names and email addresses
         :return:
         """
-        return np.hstack((
+        m1 = np.hstack((
             self.create_count_base(),
             self.create_datetime_base(),
             self.create_percentage_base(),
         ))
+        return pd.DataFrame(m1).fillna(0).astype(int)
 
 
 if __name__ == '__main__':

@@ -13,5 +13,5 @@ LOG_DIR="logs"
 export _APP_DIR="$HOME/hpcc"
 export DISPLAY=:0
 pip install -r ${_APP_DIR}/requirements.txt \
-  && time python ${_APP_DIR}/vcc-combine.py \
-  && mv {figure_*.png,boot.sh.o*} ${LOG_DIR}
+  && time python ${_APP_DIR}/vcc-combine.py 'vcc_data.npz' \
+  && sh ${HOME}/bin/clean.sh
