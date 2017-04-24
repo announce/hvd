@@ -15,10 +15,7 @@ from vccf.metrics import Metrics
 from vccf.stop_words import StopWords
 from vccf.column import Column
 from vccf.data import Data
-
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
+from vccf.visualization import Visualization
 
 
 class VccCombine:
@@ -71,21 +68,16 @@ class VccCombine:
         average_precision = dict()
         precision[0], recall[0], _ = precision_recall_curve(y_test, y_score)
         average_precision[0] = average_precision_score(y_test, y_score)
-
-        # Plot Precision-Recall curve
-        plt.clf()
-        plt.plot(recall[0], precision[0], label='Precision-Recall curve')
-        plt.xlabel('Recall')
-        plt.ylabel('Precision')
-        plt.ylim([0.0, 1.05])
-        plt.xlim([0.0, 1.0])
-        plt.title('%s %s: AUC=%.2f' % (
-            self.__class__.__name__,
-            os.path.basename(self.filename),
-            average_precision[0]),
-                  )
-        plt.legend(loc="lower left")
-        plt.savefig("figure_%s" % datetime.now().strftime('%s'))
+        Visualization.plot_pr_curve(
+            x=recall[0],
+            y=precision[0],
+            title='%s %s: AUC=%.2f' % (
+                self.__class__.__name__,
+                os.path.basename(self.filename),
+                average_precision[0],
+            ),
+            filename="figure_%s" % datetime.now().strftime('%s')
+        )
         self.logger.info(average_precision)
 
 
