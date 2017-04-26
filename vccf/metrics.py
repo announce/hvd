@@ -40,24 +40,8 @@ class Metrics:
         return np.ceil(np.log1p(arr))
 
     @classmethod
-    def round_sig(cls, x, sig=1):
-        return round(x, sig - int(floor(log10(abs(x)))) - 1)
-
-    @classmethod
-    def flag(cls, a, **kwargs):
-        """
-        # col = np.asarray([np.unique(bin_metrics[:, i]) for i in np.arange(bin_metrics.shape[1])])
-        # return np.apply_along_axis(self.flag, axis=1, arr=bin_metrics, col=col)
-        :param a: 
-        :param kwargs: 
-        :return: 
-        """
-        l = [(kwargs['col'][i] == v).astype(int) for i, v in enumerate(a)]
-        return [item for sublist in l for item in sublist]
-
-    @classmethod
     def per_to_int(cls, a):
-        return [round(p * 100) for p in a]
+        return [round(p * 1000) for p in a]
 
     @classmethod
     def dt_approx(cls, a):
@@ -80,6 +64,8 @@ class Metrics:
         Bind metrics from Git metadata
         :return:
         """
+        # print self.create_percentage_base()
+
         m1 = np.hstack((
             self.create_count_base(),
             self.create_datetime_base(),
