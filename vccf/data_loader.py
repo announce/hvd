@@ -1,7 +1,7 @@
 import numpy as np
 
 
-class Data:
+class DataLoader:
     def __init__(self):
         pass
 
