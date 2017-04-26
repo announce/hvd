@@ -55,9 +55,6 @@ class VccCombine:
         metrics = Metrics(data).create_vector()
         X2 = sparse.hstack((metrics, X))
 
-        # labels = data[:, Column.blamed_commit_id]
-        # y = is_vcc = ~pd.isnull(labels).astype(bool)
-
         labels = data[:, Column.type]
         y = is_vcc = (labels == 'blamed_commit')
         # print is_vcc.shape
