@@ -1,4 +1,3 @@
-from math import log10, floor
 import numpy as np
 import pandas as pd
 from logger import Logger
@@ -37,7 +36,9 @@ class Metrics:
 
     @classmethod
     def bin(cls, arr):
-        return np.ceil(np.log1p(arr))
+        # return np.ceil(np.log1p(arr))
+        d = (np.nanmax(arr) - np.nanmin(arr)) // 100
+        return arr // abs(d)
 
     @classmethod
     def per_to_int(cls, a):
@@ -49,7 +50,7 @@ class Metrics:
 
     def create_count_base(self):
         metrics = self.data[:, self.COUNT_BASE]
-        return np.apply_along_axis(self.bin, axis=1, arr=metrics.astype(float))
+        return np.apply_along_axis(self.bin, axis=0, arr=metrics.astype(float))
 
     def create_datetime_base(self):
         metrics = self.data[:, self.DATETIME_BASE]
@@ -57,14 +58,14 @@ class Metrics:
 
     def create_percentage_base(self):
         metrics = self.data[:, self.PERCENTAGE_BASE]
-        return np.apply_along_axis(self.per_to_int, axis=1, arr=metrics)
+        return np.apply_along_axis(self.per_to_int, axis=0, arr=metrics)
 
     def create_vector(self):
         """
         Bind metrics from Git metadata
         :return:
         """
-        # print self.create_percentage_base()
+        # print self.create_count_base()
 
         m1 = np.hstack((
             self.create_count_base(),
