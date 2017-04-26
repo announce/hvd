@@ -1,5 +1,6 @@
 import sys
 import os
+from argparse import ArgumentParser
 import numpy as np
 import scipy as sp
 import pandas as pd
@@ -16,12 +17,12 @@ from vccf.metrics import Metrics
 from vccf.stop_words import StopWords
 from vccf.column import Column
 from vccf.data_loader import DataLoader
-from vccf.option import Option
+from vccf.option import Option, Mask
 from vccf.visualization import Visualization
 
 
 class VccCombine:
-    def __init__(self, filename='vcc_data_40x800.npz', opt_keys=None):
+    def __init__(self, filename='', opt_keys=None):
         self.filename = filename
         self.logger = Logger.create(name=__name__)
         self.opt_keys = () if opt_keys is None else opt_keys
@@ -97,4 +98,24 @@ class VccCombine:
 
 
 if __name__ == '__main__':
-    VccCombine(*sys.argv[1:]).execute()
+    parser = ArgumentParser(description=u'Experimental vulnerability detector')
+    parser.add_argument(
+        '-f',
+        '--filename',
+        type=str,
+        default='vcc_data_40x800.npz',
+        help='Data filename',
+    )
+    parser.add_argument(
+        '-o',
+        '--options',
+        type=int,
+        nargs='*',
+        default=[],
+        choices=Mask.keys()
+    )
+    args = parser.parse_args()
+    VccCombine(
+        filename=args.filename,
+        opt_keys=tuple(args.options)
+    ).execute()

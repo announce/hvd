@@ -1,3 +1,4 @@
+import itertools
 import pprint
 
 """
@@ -22,10 +23,11 @@ Default = {
 }
 
 Mask = {
-    0: {'visualization': {'output': True}},
-    1: {'count_vectorizer': {'min_df': 2}},
-    2: {'svm': {'loss': 'hinge'}},
-    3: {'svm': {'class_weight': 'balanced'}},
+    0: {},
+    1: {'visualization': {'output': True}},
+    2: {'count_vectorizer': {'min_df': 2}},
+    3: {'svm': {'loss': 'hinge'}},
+    4: {'svm': {'class_weight': 'balanced'}},
 }
 
 
@@ -48,7 +50,7 @@ class Option:
     def select(self, opt_keys=(), key_type=int):
         opt = self.option
         for i in opt_keys:
-            opt = self.merge(opt, self.mask.get(key_type(i), {}))
+            opt = self.merge(self.mask.get(key_type(i), {}), opt)
         self.option = opt
         return self
 

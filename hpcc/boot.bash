@@ -14,5 +14,5 @@ TARGET_DATA="vcc_data.npz"
 [[ -d "${LOG_DIR}" ]] || mkdir ${LOG_DIR}
 
 pip install -qr ${APP_DIR}/requirements.txt \
-  && time python ${APP_DIR}/vcc-combine.py ${TARGET_DATA} \
+  && time python ${APP_DIR}/vcc-combine.py -f ${TARGET_DATA} -o 1 \
   && sh ${HOME}/bin/clean.sh
