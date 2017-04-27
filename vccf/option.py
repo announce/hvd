@@ -1,4 +1,3 @@
-import itertools
 import pprint
 
 """
@@ -9,11 +8,11 @@ Default = {
     'model_selection': {
         'test_size': 0.33,
         # Better to be fixed to compare with other challenge
-        'random_state': 16,
+        'random_state': 28,
     },
     'svm': {
         'c': 1.0,
-        'loss': 'hinge',
+        'loss': 'squared_hinge',
         'class_weight': {
             0: 0.01,
             1: 1.0,
@@ -27,7 +26,8 @@ Mask = {
     1: {'visualization': {'output': True}},
     2: {'count_vectorizer': {'min_df': 2}},
     3: {'svm': {'loss': 'hinge'}},
-    4: {'svm': {'class_weight': 'balanced'}},
+    4: {'svm': {'class_weight': None}},
+    5: {'svm': {'class_weight': 'balanced'}},
 }
 
 

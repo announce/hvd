@@ -41,8 +41,7 @@ class VccCombine:
         vectorizer = CountVectorizer(min_df=option['count_vectorizer']['min_df'],
                                      stop_words=stop_words)
         X = vectorizer.fit_transform(candidates)
-        # feature_names = vectorizer.get_feature_names()
-        # print feature_names
+        # print vectorizer.get_feature_names()
 
         # Now X is sparse array looks like:
         # [[0 0 0 ..., 0 0 0]
@@ -53,9 +52,9 @@ class VccCombine:
         #  [0 0 0 ..., 0 0 0]
         #  [0 0 0 ..., 0 0 0]]
 
+        X2 = X
         # metrics = Metrics(data).create_vector()
         # X2 = sparse.hstack((metrics, X))
-        X2 = X
 
         labels = data[:, Column.type]
         y = is_vcc = (labels == 'blamed_commit')

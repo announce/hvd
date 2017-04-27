@@ -37,7 +37,7 @@ class Metrics:
     @classmethod
     def bin(cls, arr):
         # return np.ceil(np.log1p(arr))
-        d = (np.nanmax(arr) - np.nanmin(arr)) // 10
+        d = (np.nanmax(arr) - np.nanmin(arr)) // 4
         return arr // abs(d)
 
     @classmethod
@@ -50,6 +50,7 @@ class Metrics:
 
     def create_count_base(self):
         metrics = self.data[:, self.COUNT_BASE]
+        # return metrics
         return np.apply_along_axis(self.bin, axis=0, arr=metrics.astype(float))
 
     def create_datetime_base(self):
@@ -58,7 +59,8 @@ class Metrics:
 
     def create_percentage_base(self):
         metrics = self.data[:, self.PERCENTAGE_BASE]
-        return np.apply_along_axis(self.per_to_int, axis=0, arr=metrics)
+        return metrics
+        # return np.apply_along_axis(self.per_to_int, axis=0, arr=metrics)
 
     def create_vector(self):
         """
@@ -66,12 +68,12 @@ class Metrics:
         :return:
         """
         # print self.create_count_base()
-
-        m1 = np.hstack((
-            self.create_count_base(),
-            self.create_datetime_base(),
-            self.create_percentage_base(),
-        ))
+        m1 = self.create_datetime_base()
+        # m1 = np.hstack((
+        #     self.create_count_base(),
+        #     self.create_datetime_base(),
+        #     self.create_percentage_base(),
+        # ))
         return pd.DataFrame(m1).fillna(0).astype(int)
 
 
