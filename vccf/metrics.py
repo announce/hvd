@@ -37,12 +37,12 @@ class Metrics:
     @classmethod
     def bin(cls, arr):
         # return np.ceil(np.log1p(arr))
-        d = (np.nanmax(arr) - np.nanmin(arr)) // 100
+        d = (np.nanmax(arr) - np.nanmin(arr)) // 10
         return arr // abs(d)
 
     @classmethod
     def per_to_int(cls, a):
-        return [round(p * 1000) for p in a]
+        return [round(p * 100) for p in a]
 
     @classmethod
     def dt_approx(cls, a):

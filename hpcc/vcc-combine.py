@@ -53,8 +53,9 @@ class VccCombine:
         #  [0 0 0 ..., 0 0 0]
         #  [0 0 0 ..., 0 0 0]]
 
-        metrics = Metrics(data).create_vector()
-        X2 = sparse.hstack((metrics, X))
+        # metrics = Metrics(data).create_vector()
+        # X2 = sparse.hstack((metrics, X))
+        X2 = X
 
         labels = data[:, Column.type]
         y = is_vcc = (labels == 'blamed_commit')

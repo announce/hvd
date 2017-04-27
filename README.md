@@ -19,10 +19,18 @@ $ jupyter lab
 ## HPCC
 #### Usage
 ```
+# From local client
+./bin/upload.sh
+./bin/download.sh
+```
+
+```
 # Interactive mode
 qsub -I -q SINGLE
 # Enqueue task
 qsub boot.sh
+# Enqueue task with message
+./bin/start.sh '__YOUR_MESSAGE_HERE__'
 # Watch task every 10 seconds
 bash -c 'watch -n 10 qstat -a -u $USER'
 ```
