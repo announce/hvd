@@ -9,7 +9,7 @@ from sklearn.metrics import precision_recall_curve
 from sklearn.metrics import average_precision_score
 from sklearn.model_selection import train_test_split
 from sklearn.svm import LinearSVC
-from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from vccf.logger import Logger
 from vccf.patch import Patch
 from vccf.message import Message
@@ -38,7 +38,7 @@ class VccCombine:
         message = Message(data).normalized()
         candidates = [u' '.join([v, message[i]]) for i, v in enumerate(patch)]
         stop_words = StopWords(data).list()
-        vectorizer = CountVectorizer(min_df=option['count_vectorizer']['min_df'],
+        vectorizer = TfidfVectorizer(min_df=option['count_vectorizer']['min_df'],
                                      stop_words=stop_words)
         X = vectorizer.fit_transform(candidates)
         # print vectorizer.get_feature_names()
@@ -98,7 +98,7 @@ class VccCombine:
 
 
 if __name__ == '__main__':
-    parser = ArgumentParser(description=u'Experimental vulnerability detector')
+    parser = ArgumentParser(description=u'Vulnerability detector')
     parser.add_argument(
         '-f',
         '--filename',

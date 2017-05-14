@@ -33,6 +33,8 @@ qsub boot.sh
 ./bin/start.sh '__YOUR_MESSAGE_HERE__'
 # Watch task every 10 seconds
 bash -c 'watch -n 10 qstat -a -u $USER'
+# Delete job
+qdel <Job id>
 ```
 
 #### HPCC resource stats against full size of VCC data
