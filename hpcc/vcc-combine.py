@@ -39,6 +39,7 @@ class VccCombine:
         candidates = [u' '.join([v, message[i]]) for i, v in enumerate(patch)]
         stop_words = StopWords(data).list()
         vectorizer = TfidfVectorizer(min_df=option['count_vectorizer']['min_df'],
+                                     max_features=len(candidates)//2,
                                      stop_words=stop_words)
         X = vectorizer.fit_transform(candidates)
         # print vectorizer.get_feature_names()
@@ -52,9 +53,9 @@ class VccCombine:
         #  [0 0 0 ..., 0 0 0]
         #  [0 0 0 ..., 0 0 0]]
 
-        X2 = X
-        # metrics = Metrics(data).create_vector()
-        # X2 = sparse.hstack((metrics, X))
+        # X2 = X
+        metrics = Metrics(data).create_vector()
+        X2 = sparse.hstack((metrics, X))
 
         labels = data[:, Column.type]
         y = is_vcc = (labels == 'blamed_commit')
@@ -74,7 +75,10 @@ class VccCombine:
                                class_weight=option['svm']['class_weight'],
                                loss=option['svm']['loss'])
 
+        # accuracy
         y_score = classifier.fit(X_train, y_train).decision_function(X_test)
+        accuracy = classifier.score(X_test, y_test)
+        self.logger.info(accuracy)
 
         # Compute Precision-Recall and plot curve
         precision = dict()
