@@ -1,4 +1,5 @@
 import numpy as np
+import scipy as sp
 import pandas as pd
 from logger import Logger
 from column import Column
@@ -71,20 +72,15 @@ class Metrics:
     @classmethod
     def bind_col(cls, col, features):
         df = pd.DataFrame(features.transpose()).fillna(0).astype(float)
-
-        bound = {
-            '__%s__' % c[0]: f for c, f in zip(col.items(), df.as_matrix())
-        }
-        print(zip(col.items(), df))
-        print(zip(col, df))
-        return bound
-
+        # return zip(col, sp.sparse.csr_matrix(df.values))
+        return zip(col, df.as_matrix())
+    
     def create_dict(self):
-        return {
-            self.bind_col(self.COUNT_BASE, self.create_count_base()).items() +
-            self.bind_col(self.DATETIME_BASE, self.create_datetime_base()).items() +
-            self.bind_col(self.PERCENTAGE_BASE, self.create_percentage_base()).items()
-        }
+        cols = self.bind_col(
+            self.COUNT_BASE, self.create_count_base()) + self.bind_col(
+            self.DATETIME_BASE, self.create_datetime_base()) + self.bind_col(
+            self.PERCENTAGE_BASE, self.create_percentage_base())
+        return dict(cols)
 
 if __name__ == '__main__':
     pass
