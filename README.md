@@ -48,4 +48,3 @@ qdel <Job id>
 ```
 make vcc_debug && make clean
 ```
-

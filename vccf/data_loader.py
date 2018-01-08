@@ -7,7 +7,7 @@ class DataLoader:
 
     @classmethod
     def load(cls, filename, key=None):
-        npz = np.load(filename)
+        npz = np.load(filename, encoding='bytes')
         key = npz.files[0] if key is None else key
         data = npz[key]
         npz.close()

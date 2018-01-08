@@ -2,6 +2,7 @@ from unidiff.errors import UnidiffParseError
 from logger import Logger
 from app_error import AppError
 from line_extractor import LineExtractor
+from word_extractor import WordExtractor
 from bow_num import BowNum
 from column import Column
 
@@ -11,10 +12,10 @@ class Patch:
         """
         :param data
         """
-
         self.logger = Logger.create(name=__name__)
         self.bow_num = BowNum()
         self.line_extractor = LineExtractor()
+        self.word_extractor = WordExtractor()
         self.data = data
 
     def normalized(self):
@@ -29,9 +30,12 @@ class Patch:
         invalid_patches = []
         for index, patch in enumerate(patches):
             try:
-                clean_patches[index] = self.bow_num.bin_str(u' '.join(
-                    self.line_extractor.extract_lines(patch.splitlines())
-                ))
+                # clean_patches[index] = self.bow_num.bin_str(u' '.join(
+                #     self.line_extractor.extract_lines(patch.splitlines())
+                # ))
+                clean_patches[index] = u' '.join(
+                    self.extract(patch.splitlines())
+                )
             except UnidiffParseError as e:
                 # @todo Recover 445 patches at total in vcc_data.npz
                 invalid_patches.append((index, patch, e))
@@ -41,6 +45,10 @@ class Patch:
         self.logger.info('Completed extracting lines including #%d invalid patches.' % len(invalid_patches))
         return clean_patches
 
+    def extract(self, lines):
+        w = [self.word_extractor.extract_words(l) for l in self.line_extractor.extract_lines(lines)]
+        return w
 
 if __name__ == '__main__':
-    pass
+    Patch()
+    # pass

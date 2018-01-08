@@ -62,4 +62,4 @@ class Option:
 
 
 if __name__ == '__main__':
-    print Option().select((1,))
+    print(Option().select((1,)))

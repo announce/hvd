@@ -78,7 +78,7 @@ if __name__ == '__main__':
     # print BowNum.bin_str('0.99')
     # print BowNum.bin_percentage(2.01428936878e-06)
     # print BowNum.bin_percentage(0.001)
-    print bn.bin_percentage(0)
+    print(bn.bin_percentage(0))
     # print BowNum.bin_percentage(0.5)
     # print BowNum.bin_percentage(0.9)
 

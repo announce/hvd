@@ -74,7 +74,7 @@ class Metrics:
         df = pd.DataFrame(features.transpose()).fillna(0).astype(float)
         # return zip(col, sp.sparse.csr_matrix(df.values))
         return zip(col, df.as_matrix())
-    
+
     def create_dict(self):
         cols = self.bind_col(
             self.COUNT_BASE, self.create_count_base()) + self.bind_col(

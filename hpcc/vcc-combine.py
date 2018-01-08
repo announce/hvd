@@ -59,7 +59,6 @@ class VccCombine:
 
         labels = data[:, Column.type]
         y = is_vcc = (labels == 'blamed_commit')
-        # print is_vcc.shape
 
         # Split into training and test
         X_train, \

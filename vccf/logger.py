@@ -10,16 +10,9 @@ class Logger:
 
 
     @classmethod
-    def create(cls, name, level=DEBUG, handler=None, fmt=FORMAT):
-        basicConfig()
-        # if handler is None:
-        #     handler = StreamHandler(stream=sys.stdout)
+    def create(cls, name, level=DEBUG, filename=None, fmt=FORMAT):
+        basicConfig(filename=filename,
+                    format=fmt)
         logger = getLogger(name)
-        # handler.setLevel(level)
         logger.setLevel(level)
-        # formatter = Formatter(fmt)
-        # handler.setFormatter(formatter)
-        # logger.addHandler(handler)
         return logger
-
-

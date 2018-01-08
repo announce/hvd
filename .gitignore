@@ -63,3 +63,6 @@ target/
 #Ipython Notebook
 .ipynb_checkpoints
 
+# App added
+patch/
+!var/cpp_keywords.txt
