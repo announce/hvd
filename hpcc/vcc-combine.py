@@ -1,5 +1,6 @@
 import sys
 import os
+import datetime
 from argparse import ArgumentParser
 import numpy as np
 import scipy as sp
@@ -22,7 +23,9 @@ from vccf.visualization import Visualization
 
 
 class VccCombine:
-    def __init__(self, filename='', opt_keys=None):
+    def __init__(self, task_id=0, filename='', opt_keys=None):
+        started_at = datetime.now()
+        self.task_id = task_id
         self.filename = filename
         self.logger = Logger.create(name=__name__)
         self.opt_keys = () if opt_keys is None else opt_keys
@@ -86,22 +89,29 @@ class VccCombine:
         precision[0], recall[0], _ = precision_recall_curve(y_test, y_score)
         average_precision[0] = average_precision_score(y_test, y_score)
 
-        if option['visualization']['output']:
-            Visualization.plot_pr_curve(
-                x=recall[0],
-                y=precision[0],
-                title='%s %s: AUC=%.2f' % (
-                    self.__class__.__name__,
-                    os.path.basename(self.filename),
-                    average_precision[0],
-                )
-            )
+        Visualization.plot_pr_curve(
+            x=recall[0],
+            y=precision[0],
+            title='%s %r: AUC=%.2f' % (
+                self.__class__.__name__,
+                data.shape,
+                average_precision[0],
+            ),
+            filename=os.path.join('logs', 'figure_%d' % self.task_id)
+        ) if option['visualization']['output'] else None
         self.logger.info(average_precision)
         return average_precision
 
 
 if __name__ == '__main__':
     parser = ArgumentParser(description=u'Vulnerability detector')
+    parser.add_argument(
+        '-i',
+        '--task_id',
+        type=int,
+        default=0,
+        help='Task ID',
+    )
     parser.add_argument(
         '-f',
         '--filename',
@@ -119,6 +129,7 @@ if __name__ == '__main__':
     )
     args = parser.parse_args()
     VccCombine(
+        task_id=args.task_id,
         filename=args.filename,
         opt_keys=tuple(args.options)
     ).execute()
