@@ -23,7 +23,7 @@ cat ${APP_DIR}/message.txt \
   && time python ${APP_DIR}/vcc-combine.py -f ${TARGET_DATA} -o 1 \
   && sh ${HOME}/bin/clean.sh
 
-if [[ -f "${TASK_OUTPUT}" && -x  ]]; then
+if [[ -f "${TASK_OUTPUT}" ]]; then
   pushbullet push all "${TASK_OUTPUT}" "Task #${TASK_ID} completed"
 else
   pushbullet push all note "History-based Vulnerability Detector" "Task #${TASK_ID} completed"
