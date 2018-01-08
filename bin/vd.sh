@@ -9,6 +9,7 @@ function vd() {
   local MODEL_DIR="playground/tmp/vcc_model/"
   local TARGET="s1510756@hpcc:/home/s1510756"
 
+  # Local
   start-notebook() {
     nohup bin/jupyter notebook >> "logs/${UTIME}_notebook.log" 2>&1 &
     echo $! >> "${PID_PATH}"
@@ -75,7 +76,7 @@ function vd() {
       ${WORK_DIR}/{hpcc,vccf,bin} ${TARGET}
   }
 
-
+  # Remote
   ssh() {
     qsub -q G-SINGLE -I
   }
