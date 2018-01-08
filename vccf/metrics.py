@@ -82,5 +82,6 @@ class Metrics:
             self.PERCENTAGE_BASE, self.create_percentage_base())
         return dict(cols)
 
+
 if __name__ == '__main__':
     pass

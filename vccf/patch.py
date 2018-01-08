@@ -8,6 +8,8 @@ from column import Column
 
 
 class Patch:
+    WORD_ONLY = True
+
     def __init__(self, data):
         """
         :param data
@@ -20,7 +22,7 @@ class Patch:
 
     def normalized(self):
         """
-        Note that patches are encoded in unicode: unicode(patch, 'utf-8')
+        Make sure patches are encoded in unicode: unicode(patch, 'utf-8')
         :rtype: unicode
         :return:
         """
@@ -30,12 +32,7 @@ class Patch:
         invalid_patches = []
         for index, patch in enumerate(patches):
             try:
-                # clean_patches[index] = self.bow_num.bin_str(u' '.join(
-                #     self.line_extractor.extract_lines(patch.splitlines())
-                # ))
-                clean_patches[index] = u' '.join(
-                    self.extract(patch.splitlines())
-                )
+                clean_patches[index] = self.extract(patch.splitlines())
             except UnidiffParseError as e:
                 # @todo Recover 445 patches at total in vcc_data.npz
                 invalid_patches.append((index, patch, e))
@@ -46,9 +43,15 @@ class Patch:
         return clean_patches
 
     def extract(self, lines):
-        w = [self.word_extractor.extract_words(l) for l in self.line_extractor.extract_lines(lines)]
-        return w
+        if self.WORD_ONLY:
+            return u' '.join(
+                [self.word_extractor.extract_words(l) for l in self.line_extractor.extract_lines(lines)]
+            )
+        else:
+            return self.bow_num.bin_str(u' '.join(
+                self.line_extractor.extract_lines(lines)
+            ))
+
 
 if __name__ == '__main__':
-    Patch()
-    # pass
+    pass
