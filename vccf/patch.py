@@ -1,3 +1,5 @@
+import uuid
+from enum import Enum, unique
 from unidiff.errors import UnidiffParseError
 from logger import Logger
 from app_error import AppError
@@ -8,9 +10,15 @@ from column import Column
 
 
 class Patch:
-    WORD_ONLY = True
+    UUID_ADDED, UUID_REMOVED, UUID_BOTH = [uuid.uuid4().hex for _ in range(3)]
 
-    def __init__(self, data):
+    @unique
+    class Mode(Enum):
+        RESERVED_WORD_ONLY = 1
+        LINE_TYPE_SENSITIVE = 2
+        LINE_TYPE_INSENSITIVE = 3
+
+    def __init__(self, data, mode):
         """
         :param data
         """
@@ -19,6 +27,7 @@ class Patch:
         self.line_extractor = LineExtractor()
         self.word_extractor = WordExtractor()
         self.data = data
+        self.mode = mode
 
     def normalized(self):
         """
@@ -43,14 +52,19 @@ class Patch:
         return clean_patches
 
     def extract(self, lines):
-        if self.WORD_ONLY:
+        if self.Mode.RESERVED_WORD_ONLY:
             return u' '.join(
                 [self.word_extractor.extract_words(l) for l in self.line_extractor.extract_lines(lines)]
             )
-        else:
+        elif self.Mode.LINE_TYPE_INSENSITIVE:
             return self.bow_num.bin_str(u' '.join(
                 self.line_extractor.extract_lines(lines)
             ))
+        elif self.Mode.LINE_TYPE_SENSITIVE:
+            # TODO
+            raise NotImplementedError()
+        else:
+            raise AppError("Choose mode from %r" % self.Mode.__name__)
 
 
 if __name__ == '__main__':
