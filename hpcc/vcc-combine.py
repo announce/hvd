@@ -1,6 +1,6 @@
 import sys
 import os
-import datetime
+from datetime import datetime
 from argparse import ArgumentParser
 import numpy as np
 import scipy as sp

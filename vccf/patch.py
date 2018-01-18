@@ -51,6 +51,12 @@ class Patch:
         self.logger.info('Completed extracting lines including #%d invalid patches.' % len(invalid_patches))
         return clean_patches
 
+    def sensitive(self, lines, suffix):
+        return [
+            self.word_extractor.suffix_words(self.bow_num.bin_str(l), suffix)
+            for l in lines
+        ]
+
     def extract(self, lines):
         if self.Mode.RESERVED_WORD_ONLY:
             return u' '.join(
@@ -61,8 +67,10 @@ class Patch:
                 self.line_extractor.extract_lines(lines)
             ))
         elif self.Mode.LINE_TYPE_SENSITIVE:
-            # TODO
-            raise NotImplementedError()
+            b = self.sensitive(self.line_extractor.extract_lines(lines), self.UUID_BOTH)
+            b.extend(self.sensitive(self.line_extractor.extract_added_lines(lines), self.UUID_ADDED))
+            b.extend(self.sensitive(self.line_extractor.extract_removed_lines(lines), self.UUID_REMOVED))
+            return b
         else:
             raise AppError("Choose mode from %r" % self.Mode.__name__)
 

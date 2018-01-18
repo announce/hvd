@@ -73,7 +73,7 @@ function vd() {
       --exclude '.*' \
       --exclude '*.npz' \
       --exclude 'py27/' \
-      ${WORK_DIR}/{hpcc,vccf,bin} ${TARGET}
+      ${WORK_DIR}/{vd,hpcc,vccf,bin} ${TARGET}
   }
 
   # Remote
@@ -82,8 +82,8 @@ function vd() {
   }
 
   enq() {
-    bash ${HOME}/command/clean.bash
-    qsub -q G-SINGLE ./command/boot.sh
+    bash ${HOME}/bin/clean.sh
+    qsub -q SINGLE ${HOME}/bin/boot.sh
   }
 
   deq() {

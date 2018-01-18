@@ -3,8 +3,6 @@ import re
 from logger import Logger
 # from app_error import AppError
 
-USE_KEYWORD_EXTRACTOR = True
-
 
 class WordExtractor:
     TOKEN_PATTERN = r'(?u)\b\w\w+\b'
@@ -22,9 +20,11 @@ class WordExtractor:
 
     def extract_words(self, line):
         text_list = re.findall(self.TOKEN_PATTERN, line)
-        return u' '.join([text.lower() for text in text_list if text in self.keywords]
-                         if USE_KEYWORD_EXTRACTOR
-                         else text_list)
+        return u' '.join([text.lower() for text in text_list if text in self.keywords])
+
+    def suffix_words(self, line, suffix):
+        text_list = re.findall(self.TOKEN_PATTERN, line)
+        return u' '.join(["%s_%s" % (text, suffix) for text in text_list])
 
 
 if __name__ == '__main__':
