@@ -104,7 +104,7 @@ class VccCombine:
 
 
 if __name__ == '__main__':
-    parser = ArgumentParser(description=u'Vulnerability detector')
+    parser = ArgumentParser(description=u'Hidden-based Vulnerability detector')
     parser.add_argument(
         '-i',
         '--task_id',
