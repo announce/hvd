@@ -23,9 +23,10 @@ from vccf.visualization import Visualization
 
 
 class VccCombine:
-    def __init__(self, task_id=0, filename='', opt_keys=None):
+    def __init__(self, task_id, patch_mode, filename, opt_keys=None):
         started_at = datetime.now()
         self.task_id = task_id
+        self.patch_mode = patch_mode
         self.filename = filename
         self.logger = Logger.create(name=__name__)
         self.opt_keys = () if opt_keys is None else opt_keys
@@ -37,7 +38,7 @@ class VccCombine:
         data = DataLoader.load(self.filename)
         self.logger.info('Data loaded #%d' % len(data))
 
-        patch = Patch(data, mode=Patch.Mode.LINE_TYPE_SITIVE).normalized()
+        patch = Patch(data, mode=self.patch_mode).normalized()
         message = Message(data).normalized()
         candidates = [u' '.join([v, message[i]]) for i, v in enumerate(patch)]
         stop_words = StopWords(data).list()
@@ -104,13 +105,21 @@ class VccCombine:
 
 
 if __name__ == '__main__':
-    parser = ArgumentParser(description=u'Hidden-based Vulnerability detector')
+    parser = ArgumentParser(description=u'History-based Vulnerability detector')
     parser.add_argument(
         '-i',
         '--task_id',
         type=int,
         default=0,
         help='Task ID',
+    )
+    parser.add_argument(
+        '-m',
+        '--patch_mode',
+        type=Patch.Mode.from_string,
+        default=Patch.Mode.RESERVED_WORD_ONLY,
+        choices=list(Patch.Mode),
+        help='Patch Mode',
     )
     parser.add_argument(
         '-f',
@@ -130,6 +139,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     VccCombine(
         task_id=args.task_id,
+        patch_mode=args.patch_mode,
         filename=args.filename,
         opt_keys=tuple(args.options)
     ).execute()

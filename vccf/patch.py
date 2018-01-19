@@ -18,6 +18,13 @@ class Patch:
         LINE_TYPE_SENSITIVE = 2
         LINE_TYPE_INSENSITIVE = 3
 
+        @classmethod
+        def from_string(cls, s):
+            try:
+                return cls[s]
+            except KeyError:
+                raise ValueError()
+
     def __init__(self, data, mode):
         """
         :param data
@@ -58,15 +65,16 @@ class Patch:
         ]
 
     def extract(self, lines):
-        if self.Mode.RESERVED_WORD_ONLY:
+        self.logger.info('Extracting patch lines with %r' % self.mode)
+        if self.mode is self.Mode.RESERVED_WORD_ONLY:
             return u' '.join(
                 [self.word_extractor.extract_words(l) for l in self.line_extractor.extract_lines(lines)]
             )
-        elif self.Mode.LINE_TYPE_INSENSITIVE:
+        elif self.mode is self.Mode.LINE_TYPE_INSENSITIVE:
             return self.bow_num.bin_str(u' '.join(
                 self.line_extractor.extract_lines(lines)
             ))
-        elif self.Mode.LINE_TYPE_SENSITIVE:
+        elif self.mode is self.Mode.LINE_TYPE_SENSITIVE:
             b = self.sensitive(self.line_extractor.extract_lines(lines), self.UUID_BOTH)
             b.extend(self.sensitive(self.line_extractor.extract_added_lines(lines), self.UUID_ADDED))
             b.extend(self.sensitive(self.line_extractor.extract_removed_lines(lines), self.UUID_REMOVED))
