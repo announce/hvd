@@ -1,0 +1,7 @@
+2018-01-19 23:55:42,636 - vccf.patch - INFO - Extracting patch lines with <Mode.LINE_TYPE_INSENSITIVE: 3>
+2018-01-19 23:55:42,639 - vccf.patch - INFO - Completed extracting lines including #446 invalid patches.
+/home/s1510756/hpcc/vccf/metrics.py:42: RuntimeWarning: invalid value encountered in floor_divide
+  return arr // abs(d)
+2018-01-19 23:58:39,123 - __main__ - INFO - 0.998025266244
+2018-01-19 23:58:39,338 - __main__ - INFO - {0: 0.070152630131005644}
+

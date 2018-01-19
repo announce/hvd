@@ -16,10 +16,14 @@ TARGET_DATA="vcc_data.npz"
 TASK_ID="$(date +%s)"
 TASK_OUTPUT="${HOME}/logs/figure_${TASK_ID}.png"
 
+#PATCH_MODE="RESERVED_WORD_ONLY"
+PATCH_MODE="LINE_TYPE_SENSITIVE"
+#PATCH_MODE="LINE_TYPE_INSENSITIVE"
+
 cat ${APP_DIR}/message.txt \
   && echo '' > ${APP_DIR}/message.txt \
   && pip install -qr ${APP_DIR}/requirements.txt \
-  && time python ${APP_DIR}/vcc-combine.py -f ${TARGET_DATA} -o 1 -i "${TASK_ID}" \
+  && time python ${APP_DIR}/vcc-combine.py -f ${TARGET_DATA} -o 1 -i "${TASK_ID}" -m "${PATCH_MODE}" \
   && sh ${HOME}/bin/clean.sh
 
 if [[ -f "${TASK_OUTPUT}" ]]; then

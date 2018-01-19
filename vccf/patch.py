@@ -43,7 +43,7 @@ class Patch:
         :return:
         """
         patches = self.data[:, Column.patch]
-        self.logger.info('Start extracting lines...')
+        self.logger.info('Started extracting patch lines with %r' % self.mode)
         clean_patches = [u''] * len(patches)
         invalid_patches = []
         for index, patch in enumerate(patches):
@@ -65,7 +65,6 @@ class Patch:
         ]
 
     def extract(self, lines):
-        self.logger.info('Extracting patch lines with %r' % self.mode)
         if self.mode is self.Mode.RESERVED_WORD_ONLY:
             return u' '.join(
                 [self.word_extractor.extract_words(l) for l in self.line_extractor.extract_lines(lines)]
@@ -78,7 +77,7 @@ class Patch:
             b = self.sensitive(self.line_extractor.extract_lines(lines), self.UUID_BOTH)
             b.extend(self.sensitive(self.line_extractor.extract_added_lines(lines), self.UUID_ADDED))
             b.extend(self.sensitive(self.line_extractor.extract_removed_lines(lines), self.UUID_REMOVED))
-            return b
+            return u' '.join(b)
         else:
             raise AppError("Choose mode from %r" % self.Mode.__name__)
 

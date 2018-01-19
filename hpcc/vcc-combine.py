@@ -32,6 +32,7 @@ class VccCombine:
         self.opt_keys = () if opt_keys is None else opt_keys
 
     def execute(self):
+        self.logger.info('Started executing task_id %d' % self.task_id)
         option = Option().select(self.opt_keys)
         self.logger.info('Option:\n%s' % option)
         self.logger.info('Started loading data \'%s\'' % self.filename)
@@ -81,7 +82,7 @@ class VccCombine:
         # accuracy
         y_score = classifier.fit(X_train, y_train).decision_function(X_test)
         accuracy = classifier.score(X_test, y_test)
-        self.logger.info(accuracy)
+        self.logger.info('Accuracy %r' % accuracy)
 
         # Compute Precision-Recall and plot curve
         precision = dict()
@@ -89,18 +90,19 @@ class VccCombine:
         average_precision = dict()
         precision[0], recall[0], _ = precision_recall_curve(y_test, y_score)
         average_precision[0] = average_precision_score(y_test, y_score)
+        self.logger.info('Average precision %r' % average_precision)
 
         Visualization.plot_pr_curve(
             x=recall[0],
             y=precision[0],
-            title='%s %r: AUC=%.2f' % (
+            title='%s %r %r: AUC=%.2f' % (
                 self.__class__.__name__,
+                self.patch_mode,
                 data.shape,
                 average_precision[0],
             ),
             filename=os.path.join('logs', 'figure_%d' % self.task_id)
         ) if option['visualization']['output'] else None
-        self.logger.info(average_precision)
         return average_precision
 
 
