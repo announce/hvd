@@ -37,7 +37,7 @@ class VccCombine:
         data = DataLoader.load(self.filename)
         self.logger.info('Data loaded #%d' % len(data))
 
-        patch = Patch(data, mode=Patch.Mode.LINE_TYPE_INSENSITIVE).normalized()
+        patch = Patch(data, mode=Patch.Mode.LINE_TYPE_SITIVE).normalized()
         message = Message(data).normalized()
         candidates = [u' '.join([v, message[i]]) for i, v in enumerate(patch)]
         stop_words = StopWords(data).list()
