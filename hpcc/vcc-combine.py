@@ -98,8 +98,7 @@ class VccCombine:
         Visualization.plot_pr_curve(
             x=recall[0],
             y=precision[0],
-            title='%s %r %r: AUC=%.2f' % (
-                self.__class__.__name__,
+            title='%r %r: AUC=%f' % (
                 self.patch_mode,
                 data.shape,
                 average_precision[0],
