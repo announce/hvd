@@ -6,8 +6,7 @@ import numpy as np
 import scipy as sp
 import pandas as pd
 from scipy import sparse
-from sklearn.metrics import precision_recall_curve
-from sklearn.metrics import average_precision_score
+from sklearn.metrics import precision_recall_curve, average_precision_score, f1_score, classification_report
 from sklearn.model_selection import train_test_split
 from sklearn.svm import LinearSVC
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
@@ -90,7 +89,11 @@ class VccCombine:
         average_precision = dict()
         precision[0], recall[0], _ = precision_recall_curve(y_test, y_score)
         average_precision[0] = average_precision_score(y_test, y_score)
+        f1 = f1_score(y_test, y_score)
+        report = classification_report(y_test, y_score)
         self.logger.info('Average precision %r' % average_precision)
+        self.logger.info('F1 %r' % f1)
+        self.logger.info('Overall report %r' % report)
 
         Visualization.plot_pr_curve(
             x=recall[0],

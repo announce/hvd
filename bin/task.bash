@@ -17,8 +17,8 @@ TASK_ID="$(date +%s)"
 TASK_OUTPUT="${HOME}/logs/figure_${TASK_ID}.png"
 
 #PATCH_MODE="RESERVED_WORD_ONLY"
-PATCH_MODE="LINE_TYPE_SENSITIVE"
-#PATCH_MODE="LINE_TYPE_INSENSITIVE"
+#PATCH_MODE="LINE_TYPE_SENSITIVE"
+PATCH_MODE="LINE_TYPE_INSENSITIVE"
 
 cat ${APP_DIR}/message.txt \
   && echo '' > ${APP_DIR}/message.txt \
@@ -27,7 +27,7 @@ cat ${APP_DIR}/message.txt \
   && sh ${HOME}/bin/clean.sh
 
 if [[ -f "${TASK_OUTPUT}" ]]; then
-  ${HOME}/pushbullet-bash/pushbullet push all "${TASK_OUTPUT}" "Task #${TASK_ID} completed"
+  ${HOME}/pushbullet-bash/pushbullet push all file "${TASK_OUTPUT}" "Task #${TASK_ID} completed"
 else
   ${HOME}/pushbullet-bash/pushbullet push all note "History-based Vulnerability Detector" "Task #${TASK_ID} completed"
 fi
