@@ -6,7 +6,7 @@ import numpy as np
 import scipy as sp
 import pandas as pd
 from scipy import sparse
-from sklearn.metrics import precision_recall_curve, average_precision_score, f1_score, classification_report
+from sklearn import metrics
 from sklearn.model_selection import train_test_split
 from sklearn.svm import LinearSVC
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
@@ -58,9 +58,8 @@ class VccCombine:
         #  [0 0 0 ..., 0 0 0]]
 
         # X2 = X
-        metrics = Metrics(data).create_vector()
-        X2 = sparse.hstack((metrics, X))
-
+        m = Metrics(data).create_vector()
+        X2 = sparse.hstack((m, X))
         labels = data[:, Column.type]
         y = is_vcc = (labels == 'blamed_commit')
 
@@ -83,17 +82,15 @@ class VccCombine:
         accuracy = classifier.score(X_test, y_test)
         self.logger.info('Accuracy %r' % accuracy)
 
+        print('y_score', y_score)
+
         # Compute Precision-Recall and plot curve
         precision = dict()
         recall = dict()
         average_precision = dict()
-        precision[0], recall[0], _ = precision_recall_curve(y_test, y_score)
-        average_precision[0] = average_precision_score(y_test, y_score)
-        f1 = f1_score(y_test, y_score)
-        report = classification_report(y_test, y_score)
+        precision[0], recall[0], _ = metrics.precision_recall_curve(y_test, y_score)
+        average_precision[0] = metrics.average_precision_score(y_test, y_score)
         self.logger.info('Average precision %r' % average_precision)
-        self.logger.info('F1 %r' % f1)
-        self.logger.info('Overall report %r' % report)
 
         Visualization.plot_pr_curve(
             x=recall[0],
@@ -103,8 +100,31 @@ class VccCombine:
                 data.shape,
                 average_precision[0],
             ),
-            filename=os.path.join('logs', 'figure_%d' % self.task_id)
+            filename=os.path.join('logs', 'figure_%d_pr' % self.task_id)
         ) if option['visualization']['output'] else None
+
+        yi_test = y_test.astype(int)
+        fpr, tpr, _ = metrics.roc_curve(yi_test, y_score, pos_label=1)
+        roc_auc = metrics.auc(fpr, tpr)
+
+        Visualization.plot_roc_curve(
+            x=fpr,
+            y=tpr,
+            roc_auc=roc_auc,
+            title='%r %r: area=%f' % (
+                self.patch_mode,
+                data.shape,
+                roc_auc,
+            ),
+            filename=os.path.join('logs', 'figure_%d_roc' % self.task_id)
+        ) if option['visualization']['output'] else None
+
+        yb_score = np.logical_not(y_score.round().astype(bool))
+        f1 = metrics.f1_score(y_test, yb_score)
+        report = metrics.classification_report(y_test, yb_score)
+        self.logger.info('F1 score %r' % f1)
+        print(report)
+
         return average_precision
 
 

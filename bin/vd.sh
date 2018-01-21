@@ -5,26 +5,23 @@ function vd() {
   local SELF="$(basename $0)"
   local NAME="History-based Vulnerability Detector"
   local UTIME="$(date +'%Y%m%d')"
-  local PID_PATH="tmp/.pids"
-  local MODEL_DIR="playground/tmp/vcc_model/"
   local TARGET="s1510756@hpcc:/home/s1510756"
 
   # Local
-  start-notebook() {
-    nohup bin/jupyter notebook >> "logs/${UTIME}_notebook.log" 2>&1 &
-    echo $! >> "${PID_PATH}"
+  __mac-local-setup() {
+    export APP_DIR="$(pwd)/hpcc"
+    export TARGET_DATA="$(pwd)/vcc_data_40x800.npz"
+    export LOG_DIR="$(pwd)/logs"
+    export TASK_ID="$(date +%s)"
+    export TASK_OUTPUT="${LOG_DIR}/figure_${TASK_ID}.png"
   }
 
-  mac-local-setup() {
-    export APP_DIR="$(pwd)/app"
-    export TARGET_DATA="$(pwd)/notebooks/vcc_data_40x800.npz"
-    export PYTHONPATH="$(pwd)/notebooks:$(pwd)/notebooks/vccf"
-    pyenv activate tfvcc_3.6.3
-  }
-
-  enq-mac() {
-    mac-local-setup
-    python ${APP_DIR}/hd_rnn.py -f ${TARGET_DATA} -o 1
+  __enq-mac() {
+    #    export PATCH_MODE="RESERVED_WORD_ONLY"
+#    export PATCH_MODE="LINE_TYPE_SENSITIVE"
+    export PATCH_MODE="LINE_TYPE_INSENSITIVE"
+    __mac-local-setup
+    python ${APP_DIR}/vcc-combine.py -f ${TARGET_DATA} -o 1 -i "${TASK_ID}" -m "${PATCH_MODE}"
   }
 
   py() {
@@ -40,21 +37,6 @@ function vd() {
   result() {
     WORK_DIR="$(pwd)"
     less $(ls -t ${WORK_DIR}/logs/*.log | head -1)
-  }
-
-  status() {
-    [[ -f "${PID_PATH}" ]] && cat "${PID_PATH}"
-  }
-
-  terminate-processes() {
-    if [[ -s "${PID_PATH}" ]]; then
-      kill $(status)
-      cat /dev/null > "${PID_PATH}"
-    fi
-  }
-
-  clean() {
-    rm -fr "${MODEL_DIR}/*"
   }
 
   logs() {
@@ -78,11 +60,11 @@ function vd() {
 
   # Remote
   ssh() {
-    qsub -q G-SINGLE -I
+    qsub -q SINGLE -I
   }
 
-  enq() {
-    bash ${HOME}/bin/clean.sh
+  __enq-linux() {
+    bash $(pwd)/bin/clean.sh
     qsub -q SINGLE ${HOME}/bin/boot.sh
   }
 
@@ -96,6 +78,20 @@ function vd() {
 
   watch() {
     bash -c 'watch -n 5 qstat -a -u $USER'
+  }
+
+  # General
+  enq() {
+      case "${OSTYPE}" in
+      # macOS
+      darwin*)
+          __enq-mac
+          ;;
+      # Linux
+      linux*)
+          __enq-linux
+          ;;
+      esac
   }
 
   usage() {

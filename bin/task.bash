@@ -8,8 +8,8 @@ source activate $HOME/py27
 
 APP_DIR="$HOME/hpcc"
 LOG_DIR="logs"
-TARGET_DATA="vcc_data.npz"
-#TARGET_DATA="vcc_data_40x800.npz"
+#TARGET_DATA="vcc_data.npz"
+TARGET_DATA="vcc_data_40x800.npz"
 
 [[ -d "${LOG_DIR}" ]] || mkdir ${LOG_DIR}
 
