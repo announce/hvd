@@ -6,15 +6,15 @@ cd $PBS_O_WORKDIR
 conda create --yes --prefix $HOME/py27 python=2.7
 source activate $HOME/py27
 
-APP_DIR="$HOME/hpcc"
-LOG_DIR="logs"
+APP_DIR="${HOME}/hpcc"
+LOG_DIR="${HOME}/logs"
 #TARGET_DATA="vcc_data.npz"
 TARGET_DATA="vcc_data_40x800.npz"
 
 [[ -d "${LOG_DIR}" ]] || mkdir ${LOG_DIR}
 
 TASK_ID="$(date +%s)"
-TASK_OUTPUT="${HOME}/logs/figure_${TASK_ID}.png"
+TASK_OUTPUT="figure_${TASK_ID}_*.png"
 
 #PATCH_MODE="RESERVED_WORD_ONLY"
 PATCH_MODE="LINE_TYPE_SENSITIVE"
@@ -26,8 +26,8 @@ cat ${APP_DIR}/message.txt \
   && time python ${APP_DIR}/vcc-combine.py -f ${TARGET_DATA} -o 1 -i "${TASK_ID}" -m "${PATCH_MODE}" \
   && sh ${HOME}/bin/clean.sh
 
-if [[ -f "${TASK_OUTPUT}" ]]; then
-  ${HOME}/pushbullet-bash/pushbullet push all file "${TASK_OUTPUT}" "Task #${TASK_ID} completed"
+if [[ $(find "${LOG_DIR}" -type f -name "${TASK_OUTPUT}" | wc -l) -ge 1 ]]; then
+  ${HOME}/pushbullet-bash/pushbullet push all file "${LOG_DIR}/${TASK_OUTPUT}" "Task #${TASK_ID} completed"
 else
   ${HOME}/pushbullet-bash/pushbullet push all note "History-based Vulnerability Detector" "Task #${TASK_ID} completed"
 fi

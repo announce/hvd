@@ -42,9 +42,18 @@ class VccCombine:
         message = Message(data).normalized()
         candidates = [u' '.join([v, message[i]]) for i, v in enumerate(patch)]
         stop_words = StopWords(data).list()
-        vectorizer = TfidfVectorizer(min_df=option['count_vectorizer']['min_df'],
-                                     max_features=len(candidates)//2,
+
+        # self.logger.info('max_features: None')
+        # vectorizer = TfidfVectorizer(min_df=option['count_vectorizer']['min_df'],
+        #                              max_features=None,
+        #                              stop_words=stop_words)
+        self.logger.info('CountVectorizer')
+        vectorizer = CountVectorizer(min_df=option['count_vectorizer']['min_df'],
+                                     max_features=None,
                                      stop_words=stop_words)
+        # vectorizer = TfidfVectorizer(min_df=option['count_vectorizer']['min_df'],
+        #                              max_features=len(candidates)//2,
+        #                              stop_words=stop_words)
         X = vectorizer.fit_transform(candidates)
         # print vectorizer.get_feature_names()
 
@@ -82,7 +91,7 @@ class VccCombine:
         accuracy = classifier.score(X_test, y_test)
         self.logger.info('Accuracy %r' % accuracy)
 
-        print('y_score', y_score)
+        print('y_score', y_score[1:10])
 
         # Compute Precision-Recall and plot curve
         precision = dict()
@@ -103,6 +112,7 @@ class VccCombine:
             filename=os.path.join('logs', 'figure_%d_pr' % self.task_id)
         ) if option['visualization']['output'] else None
 
+        # Compute ROC and plot curve
         yi_test = y_test.astype(int)
         fpr, tpr, _ = metrics.roc_curve(yi_test, y_score, pos_label=1)
         roc_auc = metrics.auc(fpr, tpr)
@@ -119,7 +129,7 @@ class VccCombine:
             filename=os.path.join('logs', 'figure_%d_roc' % self.task_id)
         ) if option['visualization']['output'] else None
 
-        yb_score = np.logical_not(y_score.round().astype(bool))
+        yb_score = y_score.round().astype(bool)
         f1 = metrics.f1_score(y_test, yb_score)
         report = metrics.classification_report(y_test, yb_score)
         self.logger.info('F1 score %r' % f1)
