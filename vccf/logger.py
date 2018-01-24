@@ -8,7 +8,6 @@ class Logger:
     def __init__(self):
         pass
 
-
     @classmethod
     def create(cls, name, level=DEBUG, filename=None, fmt=FORMAT):
         basicConfig(filename=filename,
