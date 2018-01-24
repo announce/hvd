@@ -46,6 +46,9 @@ qdel <Job id>
 
 ## Debug
 
-```
-make vcc_debug && make clean
-```
+
+* Write 'how' in code
+* Write 'what' in test
+* Write 'why' in commit log
+* Write 'Why not' in code comment
+

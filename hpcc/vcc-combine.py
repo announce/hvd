@@ -32,7 +32,7 @@ class VccCombine:
         self.opt_keys = () if opt_keys is None else opt_keys
 
     def exit(self):
-        self.logger.info('Exiting task %d %r' % (
+        self.logger.info('Exiting task %d at %r' % (
             self.task_id,
             self.timer.stop()
         ))
@@ -52,16 +52,13 @@ class VccCombine:
         stop_words = StopWords(data).list()
 
         self.logger.info('TfidfVectorizer,max_features=len(candidates)//2,')
-        # vectorizer = TfidfVectorizer(min_df=option['count_vectorizer']['min_df'],
-        #                              max_features=None,
-        #                              stop_words=stop_words)
         vectorizer = TfidfVectorizer(min_df=option['count_vectorizer']['min_df'],
                                      max_features=len(candidates)//2,
                                      stop_words=stop_words)
-        X = vectorizer.fit_transform(candidates)
+        x1 = vectorizer.fit_transform(candidates)
         # print vectorizer.get_feature_names()
 
-        # Now X is sparse array looks like:
+        # Now x1 is sparse array looks like:
         # [[0 0 0 ..., 0 0 0]
         #  [0 0 0 ..., 0 0 0]
         #  [0 0 0 ..., 0 0 0]
@@ -70,17 +67,17 @@ class VccCombine:
         #  [0 0 0 ..., 0 0 0]
         #  [0 0 0 ..., 0 0 0]]
 
-        # X2 = X
+        # x2 = x1
         m = Metrics(data).create_vector()
-        X2 = sparse.hstack((m, X))
+        x2 = sparse.hstack((m, x1))
         labels = data[:, Column.type]
         y = is_vcc = (labels == 'blamed_commit')
 
         # Split into training and test
-        X_train, \
-        X_test, \
+        x_train, \
+        x_test, \
         y_train, \
-        y_test = train_test_split(X2,
+        y_test = train_test_split(x2,
                                   y,
                                   test_size=option['model_selection']['test_size'],
                                   random_state=option['model_selection']['random_state'])
@@ -91,8 +88,8 @@ class VccCombine:
                                loss=option['svm']['loss'])
 
         # accuracy
-        y_score = classifier.fit(X_train, y_train).decision_function(X_test)
-        accuracy = classifier.score(X_test, y_test)
+        y_score = classifier.fit(x_train, y_train).decision_function(x_test)
+        accuracy = classifier.score(x_test, y_test)
         self.logger.info('Accuracy %r' % accuracy)
         self.logger.info('y_score', y_score[1:10])
 
@@ -181,4 +178,4 @@ if __name__ == '__main__':
         patch_mode=args.patch_mode,
         filename=args.filename,
         opt_keys=tuple(args.options)
-    ).execute()
+    ).execute().exit()
