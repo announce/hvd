@@ -1,3 +1,18 @@
+Textual difficulty assumption in multiple languages
+
+既存論文の特徴を使って実装した AUC 0.07
+新たな特徴を使って AUC 0.08
+
+
+レポジトリを絞って結果を出してみる
+他の機械学習
+
+1/22 修論v0 骨子
+1/28 修論v1
+
+3/初旬 学会v1
+
+
 2018-01-19 23:55:42,636 - vccf.patch - INFO - Extracting patch lines with <Mode.LINE_TYPE_INSENSITIVE: 3>
 2018-01-19 23:55:42,639 - vccf.patch - INFO - Completed extracting lines including #446 invalid patches.
 /home/s1510756/hpcc/vccf/metrics.py:42: RuntimeWarning: invalid value encountered in floor_divide

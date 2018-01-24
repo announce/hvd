@@ -11,6 +11,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.svm import LinearSVC
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from vccf.logger import Logger
+from vccf.timer import Timer
 from vccf.patch import Patch
 from vccf.message import Message
 from vccf.metrics import Metrics
@@ -23,15 +24,22 @@ from vccf.visualization import Visualization
 
 class VccCombine:
     def __init__(self, task_id, patch_mode, filename, opt_keys=None):
-        started_at = datetime.now()
+        self.timer = Timer().start()
         self.task_id = task_id
         self.patch_mode = patch_mode
         self.filename = filename
         self.logger = Logger.create(name=__name__)
         self.opt_keys = () if opt_keys is None else opt_keys
 
+    def exit(self):
+        self.logger.info('Exiting task %d %r' % (
+            self.task_id,
+            self.timer.stop()
+        ))
+        return sys.exit()
+
     def execute(self):
-        self.logger.info('Started executing task_id %d' % self.task_id)
+        self.logger.info('Started executing task_id %d at %r' % self.task_id, self.timer)
         option = Option().select(self.opt_keys)
         self.logger.info('Option:\n%s' % option)
         self.logger.info('Started loading data \'%s\'' % self.filename)
@@ -43,17 +51,13 @@ class VccCombine:
         candidates = [u' '.join([v, message[i]]) for i, v in enumerate(patch)]
         stop_words = StopWords(data).list()
 
-        # self.logger.info('max_features: None')
+        self.logger.info('TfidfVectorizer,max_features=len(candidates)//2,')
         # vectorizer = TfidfVectorizer(min_df=option['count_vectorizer']['min_df'],
         #                              max_features=None,
         #                              stop_words=stop_words)
-        self.logger.info('CountVectorizer')
-        vectorizer = CountVectorizer(min_df=option['count_vectorizer']['min_df'],
-                                     max_features=None,
+        vectorizer = TfidfVectorizer(min_df=option['count_vectorizer']['min_df'],
+                                     max_features=len(candidates)//2,
                                      stop_words=stop_words)
-        # vectorizer = TfidfVectorizer(min_df=option['count_vectorizer']['min_df'],
-        #                              max_features=len(candidates)//2,
-        #                              stop_words=stop_words)
         X = vectorizer.fit_transform(candidates)
         # print vectorizer.get_feature_names()
 
@@ -90,8 +94,7 @@ class VccCombine:
         y_score = classifier.fit(X_train, y_train).decision_function(X_test)
         accuracy = classifier.score(X_test, y_test)
         self.logger.info('Accuracy %r' % accuracy)
-
-        print('y_score', y_score[1:10])
+        self.logger.info('y_score', y_score[1:10])
 
         # Compute Precision-Recall and plot curve
         precision = dict()
@@ -133,9 +136,11 @@ class VccCombine:
         f1 = metrics.f1_score(y_test, yb_score)
         report = metrics.classification_report(y_test, yb_score)
         self.logger.info('F1 score %r' % f1)
-        print(report)
 
-        return average_precision
+        # Output report in multiline
+        [self.logger.info(line) for line in report.splitlines()]
+
+        return self
 
 
 if __name__ == '__main__':
