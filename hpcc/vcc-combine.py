@@ -39,7 +39,7 @@ class VccCombine:
         return sys.exit()
 
     def execute(self):
-        self.logger.info('Started executing task_id %d at %r' % self.task_id, self.timer)
+        self.logger.info('Started executing task_id %d at %r' % (self.task_id, self.timer))
         option = Option().select(self.opt_keys)
         self.logger.info('Option:\n%s' % option)
         self.logger.info('Started loading data \'%s\'' % self.filename)
