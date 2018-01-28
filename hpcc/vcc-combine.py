@@ -1,4 +1,3 @@
-import sys
 import os
 from datetime import datetime
 from argparse import ArgumentParser
@@ -36,7 +35,7 @@ class VccCombine:
             self.task_id,
             self.timer.stop()
         ))
-        return sys.exit()
+        return self
 
     def execute(self):
         self.logger.info('Started executing task_id %d at %r' % (self.task_id, self.timer))
@@ -51,7 +50,6 @@ class VccCombine:
         candidates = [u' '.join([v, message[i]]) for i, v in enumerate(patch)]
         stop_words = StopWords(data).list()
 
-        self.logger.info('TfidfVectorizer,max_features=len(candidates)//2,')
         vectorizer = TfidfVectorizer(min_df=option['count_vectorizer']['min_df'],
                                      max_features=len(candidates)//2,
                                      stop_words=stop_words)
@@ -91,7 +89,7 @@ class VccCombine:
         y_score = classifier.fit(x_train, y_train).decision_function(x_test)
         accuracy = classifier.score(x_test, y_test)
         self.logger.info('Accuracy %r' % accuracy)
-        self.logger.info('y_score', y_score[1:10])
+        self.logger.debug('y_score[1:10] %r', y_score[1:10])
 
         # Compute Precision-Recall and plot curve
         precision = dict()

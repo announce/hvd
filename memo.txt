@@ -1,24 +1,19 @@
-* feat: A new feature
-* fix: A bug fix
-* docs: Documentation only changes
-* style: Changes that do not affect the meaning of the code (white-space, formatting, missing semi-colons, etc)
-* refactor: A code change that neither fixes a bug nor adds a feature
-* perf: A code change that improves performance
-* test: Adding missing or correcting existing tests
-* chore: Changes to the build process or auxiliary tools and libraries such as documentation generation
+
+## スケジュール
+* [x] 1/22 修論v0 骨子
+* [ ] 2/1 修論v1
+* [ ] 3/初旬 学会提出
+
+## 卒論
+- ROCカーブ検証
+
+## 学会
+- レポジトリを絞って結果を出してみる
+- 他の機械学習
 
 
 既存論文の特徴を使って実装した AUC 0.07
 新たな特徴を使って AUC 0.08
-
-
-レポジトリを絞って結果を出してみる
-他の機械学習
-
-1/22 修論v0 骨子
-1/28 修論v1
-
-3/初旬 学会v1
 
 
 2018-01-19 23:55:42,636 - vccf.patch - INFO - Extracting patch lines with <Mode.LINE_TYPE_INSENSITIVE: 3>
