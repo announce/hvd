@@ -1,5 +1,5 @@
-import sys
-from logging import basicConfig, getLogger, Formatter, StreamHandler, DEBUG
+from logging import getLogger, Formatter, StreamHandler, FileHandler,DEBUG
+from os import path
 
 
 class Logger:
@@ -10,8 +10,16 @@ class Logger:
 
     @classmethod
     def create(cls, name, level=DEBUG, filename=None, fmt=FORMAT):
-        basicConfig(filename=filename,
-                    format=fmt)
-        logger = getLogger(name)
-        logger.setLevel(level)
-        return logger
+        formatter = Formatter(fmt)
+        root_logger = getLogger(name)
+        root_logger.setLevel(level)
+
+        if filename is not None:
+            file_handler = FileHandler(path.join('logs', '%s.log' % filename))
+            file_handler.setFormatter(formatter)
+            root_logger.addHandler(file_handler)
+
+        console_handler = StreamHandler()
+        console_handler.setFormatter(formatter)
+        root_logger.addHandler(console_handler)
+        return root_logger

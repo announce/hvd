@@ -26,7 +26,7 @@ class VccCombine:
         self.task_id = task_id
         self.patch_mode = patch_mode
         self.filename = filename
-        self.logger = Logger.create(name=__name__)
+        self.logger = Logger.create(name=__name__, filename=task_id)
         self.opt_keys = () if opt_keys is None else opt_keys
 
     def exit(self):
@@ -134,7 +134,7 @@ class VccCombine:
         self.logger.info('F1 score %r' % f1)
 
         # Output report in multiline
-        [self.logger.info(line) for line in report.splitlines()]
+        [self.logger.info(line) for line in ['--'] + report.splitlines() + ['--']]
 
         return self
 
