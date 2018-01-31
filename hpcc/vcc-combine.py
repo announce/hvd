@@ -1,5 +1,4 @@
 import os
-from datetime import datetime
 from argparse import ArgumentParser
 import numpy as np
 import scipy as sp
@@ -7,7 +6,7 @@ import pandas as pd
 from scipy import sparse
 from sklearn import metrics
 from sklearn.model_selection import train_test_split
-from sklearn.svm import LinearSVC
+from sklearn.svm import LinearSVC, SVC
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from vccf.logger import Logger
 from vccf.timer import Timer
@@ -31,14 +30,14 @@ class VccCombine:
         self.opt_keys = () if opt_keys is None else opt_keys
 
     def exit(self):
-        self.logger.info('Exiting task %d at %r' % (
+        self.logger.info('Exiting task %d at %s' % (
             self.task_id,
             self.timer.stop()
         ))
         return self
 
     def execute(self):
-        self.logger.info('Started executing task_id %d at %r' % (self.task_id, self.timer))
+        self.logger.info('Started executing task_id %d at %s' % (self.task_id, self.timer))
         option = Option().select(self.opt_keys)
         self.logger.info('Option:\n%s' % option)
         self.logger.info('Started loading data \'%s\'' % self.filename)
@@ -81,9 +80,11 @@ class VccCombine:
                                   random_state=option['model_selection']['random_state'])
 
         # Run classifier
-        classifier = LinearSVC(C=option['svm']['c'],
-                               class_weight=option['svm']['class_weight'],
-                               loss=option['svm']['loss'])
+        classifier = SVC(C=option['svm']['c'],
+                         class_weight=option['svm']['class_weight'])
+        # classifier = LinearSVC(C=option['svm']['c'],
+        #                        class_weight=option['svm']['class_weight'],
+        #                        loss=option['svm']['loss'])
 
         # accuracy
         y_score = classifier.fit(x_train, y_train).decision_function(x_test)

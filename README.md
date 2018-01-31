@@ -70,3 +70,10 @@ Use one of these prefix:
 > chore: Changes to the build process or auxiliary tools and libraries such as documentation generation
 
 https://github.com/angular/angular.js/blob/v1.6.8/DEVELOPERS.md#type
+
+
+#### TODOSs
+* [ ] K Fold http://scikit-learn.org/stable/modules/generated/sklearn.model_selection.KFold.html
+* [ ] Binary vector (not counter)
+* [ ] Choose the most contributing features
+* [ ] SVM
