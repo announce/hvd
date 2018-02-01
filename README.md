@@ -73,8 +73,8 @@ https://github.com/angular/angular.js/blob/v1.6.8/DEVELOPERS.md#type
 
 
 #### TODOSs
-* [ ] K Fold http://scikit-learn.org/stable/modules/generated/sklearn.model_selection.KFold.html
-* [ ] Cross validation 9 vs 1
+* [x] Non-linear SVM
+* [x] Cross validation 9 vs 1
 * [ ] Binary vector (not counter)
 * [ ] Extract the most contributing features
-* [x] Non-linear SVM
+* [ ] K Fold http://scikit-learn.org/stable/modules/generated/sklearn.model_selection.KFold.html

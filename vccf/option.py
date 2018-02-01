@@ -6,7 +6,7 @@ Easier to represent option types as pure Python but not JSON or something else
 Default = {
     'count_vectorizer': {'min_df': 1},
     'model_selection': {
-        'test_size': 0.2,
+        'test_size': 0.1,
         # Better to be fixed to compare with other challenge
         'random_state': 28,
     },
