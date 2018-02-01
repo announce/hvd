@@ -37,6 +37,7 @@ class VccCombine:
         return self
 
     def execute(self):
+        self.logger.info("Training data size")
         self.logger.info('Started executing task_id %d at %s' % (self.task_id, self.timer))
         option = Option().select(self.opt_keys)
         self.logger.info('Option:\n%s' % option)
@@ -80,11 +81,10 @@ class VccCombine:
                                   random_state=option['model_selection']['random_state'])
 
         # Run classifier
-        classifier = SVC(C=option['svm']['c'],
-                         class_weight=option['svm']['class_weight'])
-        # classifier = LinearSVC(C=option['svm']['c'],
-        #                        class_weight=option['svm']['class_weight'],
-        #                        loss=option['svm']['loss'])
+        # classifier = SVC(C=option['svm']['c'])
+        classifier = LinearSVC(C=option['svm']['c'],
+                               class_weight=option['svm']['class_weight'],
+                               loss=option['svm']['loss'])
 
         # accuracy
         y_score = classifier.fit(x_train, y_train).decision_function(x_test)
