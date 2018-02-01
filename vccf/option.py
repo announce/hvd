@@ -13,10 +13,7 @@ Default = {
     'svm': {
         'c': 1.0,
         'loss': 'squared_hinge',
-        'class_weight': {
-            0: 0.01,
-            1: 1.0,
-        }
+        'class_weight': 'balanced'
     },
     'visualization': {'output': False}
 }
@@ -27,7 +24,10 @@ Mask = {
     2: {'count_vectorizer': {'min_df': 2}},
     3: {'svm': {'loss': 'hinge'}},
     4: {'svm': {'class_weight': None}},
-    5: {'svm': {'class_weight': 'balanced'}},
+    5: {'svm': {'class_weight': {
+        0: 0.01,
+        1: 1.0,
+    }}},
 }
 
 
