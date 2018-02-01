@@ -15,7 +15,7 @@ from vccf.message import Message
 from vccf.metrics import Metrics
 from vccf.stop_words import StopWords
 from vccf.column import Column
-from vccf.data_loader import DataLoader
+from vccf.data_set import DataSet
 from vccf.option import Option, Mask
 from vccf.visualization import Visualization
 
@@ -42,7 +42,7 @@ class VccCombine:
         option = Option().select(self.opt_keys)
         self.logger.info('Option:\n%s' % option)
         self.logger.info('Started loading data \'%s\'' % self.filename)
-        data = DataLoader.load(self.filename)
+        data = DataSet.load(self.filename)
         self.logger.info('Data loaded #%d' % len(data))
 
         patch = Patch(data, mode=self.patch_mode).normalized()
@@ -92,6 +92,9 @@ class VccCombine:
         accuracy = classifier.score(x_test, y_test)
         self.logger.info('Accuracy %r' % accuracy)
         self.logger.debug('y_score[1:10] %r', y_score[1:10])
+
+        # Save classifier model
+        DataSet.save(os.path.join('logs', 'model_%d' % self.task_id), model=classifier)
 
         # Compute Precision-Recall and plot curve
         precision = dict()

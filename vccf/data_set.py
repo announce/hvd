@@ -1,7 +1,7 @@
 import numpy as np
 
 
-class DataLoader:
+class DataSet:
     def __init__(self):
         pass
 
@@ -12,6 +12,10 @@ class DataLoader:
         data = npz[key]
         npz.close()
         return data
+
+    @classmethod
+    def save(cls, filename, *args, **kwargs):
+        return np.savez(filename, *args, **kwargs)
 
 
 if __name__ == '__main__':
