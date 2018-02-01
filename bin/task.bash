@@ -26,8 +26,8 @@ cat ${APP_DIR}/message.txt \
   && time python ${APP_DIR}/vcc-combine.py -f ${TARGET_DATA} -o 1 -i "${TASK_ID}" -m "${PATCH_MODE}" \
   && sh ${HOME}/bin/clean.sh
 
-#if [[ $(find "${LOG_DIR}" -type f -name "${TASK_OUTPUT}" | wc -l) -ge 1 ]]; then
-#  ${HOME}/pushbullet-bash/pushbullet push all file "${LOG_DIR}/${TASK_OUTPUT}" "Task #${TASK_ID} completed"
-#else
-#  ${HOME}/pushbullet-bash/pushbullet push all note "History-based Vulnerability Detector" "Task #${TASK_ID} completed"
-#fi
+if [[ $(find "${LOG_DIR}" -type f -name "${TASK_OUTPUT}" | wc -l) -ge 1 ]]; then
+  ${HOME}/pushbullet-bash/pushbullet push all file "${LOG_DIR}/${TASK_OUTPUT}" "Task #${TASK_ID} completed"
+else
+  ${HOME}/pushbullet-bash/pushbullet push all note "History-based Vulnerability Detector" "Task #${TASK_ID} completed"
+fi
