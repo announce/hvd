@@ -15,6 +15,7 @@ from vccf.message import Message
 from vccf.metrics import Metrics
 from vccf.stop_words import StopWords
 from vccf.column import Column
+from vccf.contribution import Contribution
 from vccf.data_set import DataSet
 from vccf.option import Option, Mask
 from vccf.visualization import Visualization
@@ -55,7 +56,6 @@ class VccCombine:
                                      stop_words=stop_words,
                                      binary=True)
         x1 = vectorizer.fit_transform(candidates)
-        # print vectorizer.get_feature_names()
 
         # Now x1 is sparse array looks like:
         # [[0 0 0 ..., 0 0 0]
@@ -95,6 +95,15 @@ class VccCombine:
 
         # Save classifier model
         DataSet.save(os.path.join('logs', 'model_%d' % self.task_id), model=classifier)
+
+        Visualization.plot_contribution(
+            ctb=Contribution(model=classifier, labels=vectorizer.get_feature_names()).explain(),
+            title='%r %r' % (
+                self.patch_mode,
+                data.shape,
+            ),
+            filename=os.path.join('logs', 'figure_%d_ctb' % self.task_id)
+        )
 
         # Compute Precision-Recall and plot curve
         precision = dict()

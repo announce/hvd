@@ -44,6 +44,22 @@ class Visualization:
         plt.legend(loc="lower right")
         plt.savefig(filename)
 
+    @classmethod
+    def plot_contribution(cls, ctb, title='', filename=None):
+        """
+        :param ctb:
+        :param title:
+        :param filename:
+        :type ctb: Contribution
+        :return:
+        """
+        plt.figure(figsize=(15, 5))
+        colors = ['red' if c < 0 else 'blue' for c in ctb.weight[ctb.top_coefficients]]
+        plt.bar(ctb.range(), ctb.nominee_weights(), color=colors)
+        plt.xticks(ctb.height(), ctb.nominee_names(), rotation=60, ha='right')
+        plt.title(title)
+        plt.savefig(filename)
+
 
 if __name__ == '__main__':
     pass
