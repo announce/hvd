@@ -94,6 +94,10 @@ function vd() {
       esac
   }
 
+  q() {
+    qstat -a | less
+  }
+
   usage() {
     echo -e "${SELF} -- ${NAME}
     \nUsage: ${SELF} [sub-command]
