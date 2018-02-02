@@ -10,7 +10,7 @@ from column import Column
 
 
 class Patch:
-    UUID_ADDED, UUID_REMOVED, UUID_BOTH = [uuid.uuid4().hex for _ in range(3)]
+    UUID_ADDED, UUID_REMOVED, UUID_MIXED = [uuid.uuid4().hex[:6] for _ in range(3)]
 
     @unique
     class Mode(Enum):
@@ -44,6 +44,9 @@ class Patch:
         """
         patches = self.data[:, Column.patch]
         self.logger.info('Started extracting patch lines with %r' % self.mode)
+        if self.mode is self.Mode.LINE_TYPE_SENSITIVE:
+            self.logger.info('(UUID_ADDED, UUID_REMOVED, UUID_MIXED) = (%r, %r, %r)'
+                             % (self.UUID_ADDED, self.UUID_REMOVED, self.UUID_MIXED))
         clean_patches = [u''] * len(patches)
         invalid_patches = []
         for index, patch in enumerate(patches):
@@ -74,7 +77,7 @@ class Patch:
                 self.line_extractor.extract_lines(lines)
             ))
         elif self.mode is self.Mode.LINE_TYPE_SENSITIVE:
-            b = self.sensitive(self.line_extractor.extract_lines(lines), self.UUID_BOTH)
+            b = self.sensitive(self.line_extractor.extract_lines(lines), self.UUID_MIXED)
             b.extend(self.sensitive(self.line_extractor.extract_added_lines(lines), self.UUID_ADDED))
             b.extend(self.sensitive(self.line_extractor.extract_removed_lines(lines), self.UUID_REMOVED))
             return u' '.join(b)

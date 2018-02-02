@@ -14,11 +14,11 @@ TARGET_DATA="vcc_data.npz"
 [[ -d "${LOG_DIR}" ]] || mkdir ${LOG_DIR}
 
 TASK_ID="$(date +%s)"
-TASK_OUTPUT="figure_${TASK_ID}_*.png"
+TASK_OUTPUT="figure_${TASK_ID}_pr.png"
 
 #PATCH_MODE="RESERVED_WORD_ONLY"
-#PATCH_MODE="LINE_TYPE_SENSITIVE"
-PATCH_MODE="LINE_TYPE_INSENSITIVE"
+PATCH_MODE="LINE_TYPE_SENSITIVE"
+#PATCH_MODE="LINE_TYPE_INSENSITIVE"
 
 cat ${APP_DIR}/message.txt \
   && echo '' > ${APP_DIR}/message.txt \

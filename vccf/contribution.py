@@ -26,7 +26,8 @@ class Contribution:
         return np.arange(1, 1 + 2 * self.top_n)
 
     def nominee_weights(self):
-        return self.weight[self.top_coefficients]
+        w = self.weight[self.top_coefficients]
+        return np.fabs(w)
 
     def nominee_names(self):
         return np.array(self.labels)[self.top_coefficients]

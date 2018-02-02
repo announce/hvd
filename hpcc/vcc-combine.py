@@ -38,7 +38,6 @@ class VccCombine:
         return self
 
     def execute(self):
-        self.logger.info("@@binary=True")
         self.logger.info('Started executing task_id %d at %s' % (self.task_id, self.timer))
         option = Option().select(self.opt_keys)
         self.logger.info('Option:\n%s' % option)
@@ -53,8 +52,8 @@ class VccCombine:
 
         vectorizer = TfidfVectorizer(min_df=option['count_vectorizer']['min_df'],
                                      max_features=len(candidates)//2,
-                                     stop_words=stop_words,
-                                     binary=True)
+                                     stop_words=stop_words)
+        # binary=True
         x1 = vectorizer.fit_transform(candidates)
 
         # Now x1 is sparse array looks like:

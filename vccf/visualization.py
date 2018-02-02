@@ -53,10 +53,10 @@ class Visualization:
         :type ctb: Contribution
         :return:
         """
-        plt.figure(figsize=(15, 5))
+        plt.figure(figsize=(16, 8))
         colors = ['red' if c < 0 else 'blue' for c in ctb.weight[ctb.top_coefficients]]
-        plt.bar(ctb.range(), ctb.nominee_weights(), color=colors)
-        plt.xticks(ctb.height(), ctb.nominee_names(), rotation=60, ha='right')
+        plt.barh(ctb.range(), ctb.nominee_weights(), color=colors)
+        plt.yticks(ctb.height(), ctb.nominee_names())
         plt.title(title)
         plt.savefig(filename)
 
