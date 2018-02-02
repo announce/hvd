@@ -75,6 +75,7 @@ https://github.com/angular/angular.js/blob/v1.6.8/DEVELOPERS.md#type
 #### TODOSs
 * [x] Non-linear SVM
 * [x] Cross validation 9 vs 1
-* [ ] Binary vector (not counter)
+* [x] Binary vector (not counter)
+** Affective for ROC area
 * [ ] Extract the most contributing features
 * [ ] K Fold http://scikit-learn.org/stable/modules/generated/sklearn.model_selection.KFold.html
