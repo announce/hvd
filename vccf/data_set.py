@@ -1,20 +1,21 @@
 import numpy as np
+from vccf.logger import Logger
 
 
 class DataSet:
     def __init__(self):
-        pass
+        self.logger = Logger.create(name=__name__)
 
-    @classmethod
-    def load(cls, filename, key=None):
-        npz = np.load(filename, encoding='bytes')
-        key = npz.files[0] if key is None else key
-        data = npz[key]
-        npz.close()
+    def load(self, filename, key=None):
+        self.logger.info('Started loading data \'%s\'' % filename)
+        with np.load(filename, encoding='bytes') as npz:
+            key = npz.files[0] if key is None else key
+            data = npz[key]
+        self.logger.info('Data loaded #%d' % len(data))
         return data
 
-    @classmethod
-    def save(cls, filename, *args, **kwargs):
+    def save(self, filename, *args, **kwargs):
+        self.logger.info('saving')
         return np.savez(filename, *args, **kwargs)
 
 

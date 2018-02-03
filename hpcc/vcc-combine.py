@@ -22,13 +22,19 @@ from vccf.visualization import Visualization
 
 
 class VccCombine:
-    def __init__(self, task_id, patch_mode, filename, opt_keys=None):
+    def __init__(self, task_id, patch_mode, filename):
         self.timer = Timer().start()
         self.task_id = task_id
         self.patch_mode = patch_mode
         self.filename = filename
         self.logger = Logger.create(name=__name__, filename=task_id)
+        self.data_set = DataSet()
+        self.option = Option()
+        self.opt_keys = ()
+
+    def set_opt_keys(self, opt_keys):
         self.opt_keys = () if opt_keys is None else opt_keys
+        return self
 
     def exit(self):
         self.logger.info('Exiting task %d at %s' % (
@@ -39,11 +45,8 @@ class VccCombine:
 
     def execute(self):
         self.logger.info('Started executing task_id %d at %s' % (self.task_id, self.timer))
-        option = Option().select(self.opt_keys)
-        self.logger.info('Option:\n%s' % option)
-        self.logger.info('Started loading data \'%s\'' % self.filename)
-        data = DataSet.load(self.filename)
-        self.logger.info('Data loaded #%d' % len(data))
+        option = self.option.select(self.opt_keys)
+        data = self.data_set.load(self.filename)
 
         patch = Patch(data, mode=self.patch_mode).normalized()
         message = Message(data).normalized()
@@ -56,7 +59,7 @@ class VccCombine:
         # binary=True
         x1 = vectorizer.fit_transform(candidates)
 
-        # Now x1 is sparse array looks like:
+        # Now x1 is sparse array storing like:
         # [[0 0 0 ..., 0 0 0]
         #  [0 0 0 ..., 0 0 0]
         #  [0 0 0 ..., 0 0 0]
@@ -93,7 +96,8 @@ class VccCombine:
         self.logger.debug('y_score[1:10] %r', y_score[1:10])
 
         # Save classifier model
-        DataSet.save(os.path.join('logs', 'model_%d' % self.task_id), model=classifier)
+        if option['save_model'] is True:
+            self.data_set.save(os.path.join('logs', 'model_%d' % self.task_id), model=classifier)
 
         Visualization.plot_contribution(
             ctb=Contribution(model=classifier, labels=vectorizer.get_feature_names()).explain(),
@@ -187,6 +191,7 @@ if __name__ == '__main__':
     VccCombine(
         task_id=args.task_id,
         patch_mode=args.patch_mode,
-        filename=args.filename,
+        filename=args.filename
+    ).set_opt_keys(
         opt_keys=tuple(args.options)
     ).execute().exit()

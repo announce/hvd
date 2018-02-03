@@ -1,4 +1,5 @@
 import pprint
+from vccf.logger import Logger
 
 """
 Easier to represent option types as pure Python but not JSON or something else
@@ -15,6 +16,7 @@ Default = {
         'loss': 'squared_hinge',
         'class_weight': 'balanced'
     },
+    'save_model': False,
     'visualization': {'output': False}
 }
 
@@ -28,11 +30,13 @@ Mask = {
         0: 0.01,
         1: 1.0,
     }}},
+    6: {'save_model': True}
 }
 
 
 class Option:
     def __init__(self, option=None):
+        self.logger = Logger.create(name=__name__)
         self.option = Default.copy() if option is None else option
         self.mask = Mask.copy()
 
@@ -52,6 +56,7 @@ class Option:
         for i in opt_keys:
             opt = self.merge(self.mask.get(key_type(i), {}), opt)
         self.option = opt
+        self.logger.info('Selected: %s' % opt)
         return self
 
     def __getitem__(self, index):

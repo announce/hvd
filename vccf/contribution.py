@@ -22,8 +22,8 @@ class Contribution:
     def range(self):
         return np.arange(2 * self.top_n)
 
-    def height(self):
-        return np.arange(1, 1 + 2 * self.top_n)
+    # def height(self):
+    #     return np.arange(1, 1 + 2 * self.top_n)
 
     def nominee_weights(self):
         w = self.weight[self.top_coefficients]

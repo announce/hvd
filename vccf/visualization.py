@@ -55,9 +55,10 @@ class Visualization:
         """
         plt.figure(figsize=(16, 8))
         colors = ['red' if c < 0 else 'blue' for c in ctb.weight[ctb.top_coefficients]]
-        plt.barh(ctb.range(), ctb.nominee_weights(), color=colors)
-        plt.yticks(ctb.height(), ctb.nominee_names())
+        plt.barh(ctb.range(), ctb.nominee_weights(), color=colors, alpha=.6)
+        plt.yticks(ctb.range(), ctb.nominee_names())
         plt.title(title)
+        plt.tight_layout()
         plt.savefig(filename)
 
 
