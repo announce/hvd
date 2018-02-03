@@ -48,7 +48,8 @@ class VccCombine:
         option = self.option.select(self.opt_keys)
         data = self.data_set.load(self.filename)
 
-        patch = Patch(data, mode=self.patch_mode).normalized()
+        patch_container = Patch(data, mode=self.patch_mode)
+        patch = patch_container.normalized()
         message = Message(data).normalized()
         candidates = [u' '.join([v, message[i]]) for i, v in enumerate(patch)]
         stop_words = StopWords(data).list()
@@ -68,7 +69,6 @@ class VccCombine:
         #  [0 0 0 ..., 0 0 0]
         #  [0 0 0 ..., 0 0 0]]
 
-        # x2 = x1
         m = Metrics(data).create_vector()
         x2 = sparse.hstack((m, x1))
         labels = data[:, Column.type]
@@ -99,8 +99,11 @@ class VccCombine:
         if option['save_model'] is True:
             self.data_set.save(os.path.join('logs', 'model_%d' % self.task_id), model=classifier)
 
+        # Plot contribution
         Visualization.plot_contribution(
-            ctb=Contribution(model=classifier, labels=vectorizer.get_feature_names()).explain(),
+            ctb=Contribution(model=classifier,
+                             labels=vectorizer.get_feature_names(),
+                             patch_container=patch_container).explain(),
             title='%r %r' % (
                 self.patch_mode,
                 data.shape,

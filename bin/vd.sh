@@ -18,8 +18,8 @@ function vd() {
 
   __enq-mac() {
     #    export PATCH_MODE="RESERVED_WORD_ONLY"
-#    export PATCH_MODE="LINE_TYPE_SENSITIVE"
-    export PATCH_MODE="LINE_TYPE_INSENSITIVE"
+    export PATCH_MODE="LINE_TYPE_SENSITIVE"
+#    export PATCH_MODE="LINE_TYPE_INSENSITIVE"
     __mac-local-setup
     python ${APP_DIR}/vcc-combine.py -f ${TARGET_DATA} -o 1 -i "${TASK_ID}" -m "${PATCH_MODE}"
   }

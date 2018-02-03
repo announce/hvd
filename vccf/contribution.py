@@ -3,11 +3,12 @@ import numpy as np
 
 class Contribution:
 
-    def __init__(self, model, labels, top_n=20):
+    def __init__(self, model, labels, patch_container, top_n=20):
         self.model = model
         self.labels = labels
         self.top_n = top_n
         self.weight = model.coef_.ravel()
+        self.patch_container = patch_container
         self.top_coefficients = None
 
     def explain(self):
@@ -30,7 +31,23 @@ class Contribution:
         return np.fabs(w)
 
     def nominee_names(self):
-        return np.array(self.labels)[self.top_coefficients]
+        nominees = np.array(self.labels)[self.top_coefficients]
+        humanized_labels = [
+            self.humanize(l) for l in nominees
+        ] if self.patch_container.mode is self.patch_container.Mode.LINE_TYPE_SENSITIVE else nominees
+        return humanized_labels
+
+    def humanize(self, label):
+        return label.replace(
+            self.patch_container.UUID_ADDED,
+            'ADDED',
+        ).replace(
+            self.patch_container.UUID_REMOVED,
+            'REMOVED',
+        ).replace(
+            self.patch_container.UUID_MIXED,
+            'MIXED',
+        )
 
 
 if __name__ == '__main__':
