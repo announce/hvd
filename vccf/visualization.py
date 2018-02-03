@@ -18,6 +18,7 @@ class Visualization:
         # Plot Precision-Recall curve
         filename = cls.default_filename() if filename is None else filename
         plt.clf()
+        plt.figure()
         plt.plot(x, y, label='Precision-Recall curve')
         plt.xlabel('Recall')
         plt.ylabel('Precision')
@@ -53,7 +54,8 @@ class Visualization:
         :type ctb: Contribution
         :return:
         """
-        plt.figure(figsize=(16, 8))
+        plt.figure(figsize=(8, 12))
+        plt.grid(color='#cccccc', linestyle='-')
         colors = ['red' if c < 0 else 'blue' for c in ctb.weight[ctb.top_coefficients]]
         plt.barh(ctb.range(), ctb.nominee_weights(), color=colors, alpha=.6)
         plt.yticks(ctb.range(), ctb.nominee_names())
