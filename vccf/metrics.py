@@ -20,6 +20,7 @@ class Metrics:
         'size': Column.size,
         'distinct_authors_count': Column.distinct_authors_count,
         'commits_count': Column.commits_count,
+        'files_changed': Column.files_changed,
     }
 
     DATETIME_BASE = {

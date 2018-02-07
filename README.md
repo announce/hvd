@@ -10,12 +10,9 @@ $ conda create --name py27 --file notebooks/conda_requirements.txt
 ```
 
 
-## Run Jupyter on MacBook
+## Dataset
+The dataset is available at https://goo.gl/4wrwRx in npz format.
 
-```
-$ pyenv activate anaconda2-2.5.0/envs/py27
-$ jupyter lab
-```
 
 ## HPCC
 #### Usage
@@ -77,5 +74,5 @@ https://github.com/angular/angular.js/blob/v1.6.8/DEVELOPERS.md#type
 * [x] Cross validation 9 vs 1
 * [x] Binary vector (not counter)
 ** Affective for ROC area
-* [ ] Extract the most contributing features
+* [ ] Extract the most contributing features + Count reserved keywords
 * [ ] K Fold http://scikit-learn.org/stable/modules/generated/sklearn.model_selection.KFold.html

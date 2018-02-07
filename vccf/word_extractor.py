@@ -1,7 +1,6 @@
 import os
 import re
 from logger import Logger
-# from app_error import AppError
 
 
 class WordExtractor:
