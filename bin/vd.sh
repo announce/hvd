@@ -13,6 +13,7 @@ function vd() {
     export TARGET_DATA="$(pwd)/vcc_data_40x800.npz"
     export LOG_DIR="$(pwd)/logs"
     export TASK_ID="$(date +%s)"
+    export PYTHONPATH="${APP_DIR}:${APP_DIR}/vccf"
     export TASK_OUTPUT="${LOG_DIR}/figure_${TASK_ID}.png"
   }
 
@@ -25,8 +26,7 @@ function vd() {
   }
 
   py() {
-    mac-local-setup
-    python
+    __mac-local-setup && python $@
   }
 
   fig() {
@@ -110,10 +110,11 @@ function vd() {
     usage
     echo "INFO: ${SELF} requires a sub-command"
   elif [[ "$(type -t $1)" = "function" ]]; then
-    $1
+    CALLEE=$1
+    shift && ${CALLEE} $@
   else
     usage
   fi
 }
 
-vd $1
+vd $@

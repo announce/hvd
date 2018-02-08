@@ -20,4 +20,27 @@ class DataSet:
 
 
 if __name__ == '__main__':
-    pass
+    import sys
+    from datetime import date, datetime
+    import json
+    from vccf.column import Column
+
+    def json_serial(obj):
+        # https://stackoverflow.com/a/22238613/879951
+        if isinstance(obj, (datetime, date)):
+            return obj.isoformat()
+        raise TypeError("Type %s not serializable" % type(obj))
+
+    ds = DataSet()
+    ds.logger.disabled = True
+    data = ds.load('vcc_data_40x800.npz')
+
+    keys = Column.__members__.keys()
+    labels = data[:, Column.type]
+    values = data[(labels == 'blamed_commit')][0]
+
+    print(json.dumps(
+        dict(zip(keys, values)),
+        default=json_serial,
+    ))
+

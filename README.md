@@ -76,3 +76,4 @@ https://github.com/angular/angular.js/blob/v1.6.8/DEVELOPERS.md#type
 ** Affective for ROC area
 * [ ] Extract the most contributing features + Count reserved keywords
 * [ ] K Fold http://scikit-learn.org/stable/modules/generated/sklearn.model_selection.KFold.html
+* [ ] Hyper parameter http://scikit-learn.org/stable/modules/grid_search.html
