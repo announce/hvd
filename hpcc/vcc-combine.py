@@ -111,6 +111,7 @@ class VccCombine:
             filename=os.path.join('logs', 'figure_%d_ctb' % self.task_id)
         )
 
+        # Model evaluation: quantifying the quality of predictions
         # Compute Precision-Recall and plot curve
         precision = dict()
         recall = dict()
