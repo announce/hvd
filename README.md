@@ -1,6 +1,10 @@
 History-based Vulnerability Detector
 ===
 
+## Introduction
+- This methodology is proposed at thesis paper: DOI
+- Citation
+
 ## Setup Jupyter on MacBook
 
 ```
@@ -77,3 +81,6 @@ https://github.com/angular/angular.js/blob/v1.6.8/DEVELOPERS.md#type
 * [ ] Extract the most contributing features + Count reserved keywords
 * [ ] K Fold http://scikit-learn.org/stable/modules/generated/sklearn.model_selection.KFold.html
 * [ ] Hyper parameter http://scikit-learn.org/stable/modules/grid_search.html
+* [ ] Removed lines in security patch should be dangerous
+** metrics: blamed_commit
+** token: removed line in fixing_commit

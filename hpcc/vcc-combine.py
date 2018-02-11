@@ -7,6 +7,7 @@ from scipy import sparse
 from sklearn import metrics
 from sklearn.model_selection import train_test_split
 from sklearn.svm import LinearSVC, SVC
+from sklearn.naive_bayes import GaussianNB
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from vccf.logger import Logger
 from vccf.timer import Timer
@@ -85,13 +86,18 @@ class VccCombine:
 
         # Run classifier
         # classifier = SVC(C=option['svm']['c'])
-        classifier = LinearSVC(C=option['svm']['c'],
-                               class_weight=option['svm']['class_weight'],
-                               loss=option['svm']['loss'])
+        # classifier = LinearSVC(C=option['svm']['c'],
+        #                        class_weight=option['svm']['class_weight'],
+        #                        loss=option['svm']['loss'])
+        classifier = GaussianNB()
+        classifier.fit(x_train, y_train)
+        # clf_pf.partial_fit(X, Y, np.unique(Y))
+        y_score = classifier.predict_proba(x_test)
+        accuracy = classifier.score(x_train, y_train)
 
         # accuracy
-        y_score = classifier.fit(x_train, y_train).decision_function(x_test)
-        accuracy = classifier.score(x_test, y_test)
+        # y_score = classifier.fit(x_train, y_train).decision_function(x_test)
+        # accuracy = classifier.score(x_test, y_test)
         self.logger.info('Accuracy %r' % accuracy)
         self.logger.debug('y_score[1:10] %r', y_score[1:10])
 
@@ -99,17 +105,17 @@ class VccCombine:
         if option['save_model'] is True:
             self.data_set.save(os.path.join('logs', 'model_%d' % self.task_id), model=classifier)
 
-        # Plot contribution
-        Visualization.plot_contribution(
-            ctb=Contribution(model=classifier,
-                             labels=vectorizer.get_feature_names(),
-                             patch_container=patch_container).explain(),
-            title='%r %r' % (
-                self.patch_mode,
-                data.shape,
-            ),
-            filename=os.path.join('logs', 'figure_%d_ctb' % self.task_id)
-        )
+        # # Plot contribution
+        # Visualization.plot_contribution(
+        #     ctb=Contribution(model=classifier,
+        #                      labels=vectorizer.get_feature_names(),
+        #                      patch_container=patch_container).explain(),
+        #     title='%r %r' % (
+        #         self.patch_mode,
+        #         data.shape,
+        #     ),
+        #     filename=os.path.join('logs', 'figure_%d_ctb' % self.task_id)
+        # )
 
         # Model evaluation: quantifying the quality of predictions
         # Compute Precision-Recall and plot curve
