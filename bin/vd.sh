@@ -112,8 +112,8 @@ function vd() {
           TARGET_FILE="${HOME}/.bashrc"
           ;;
       *)
-        echo 'Error: Supported shells are [BASH, ZSH]'
-        echo 'Error: Add $(pwd) to your PATH'
+        echo "Error: Supported shells are [BASH, ZSH]"
+        echo "Error: Add $(pwd) to your PATH"
         exit 1
         ;;
       esac
