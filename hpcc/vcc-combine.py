@@ -7,7 +7,7 @@ from scipy import sparse
 from sklearn import metrics
 from sklearn.model_selection import train_test_split
 from sklearn.svm import LinearSVC, SVC
-from sklearn.naive_bayes import GaussianNB
+from sklearn.naive_bayes import MultinomialNB
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from vccf.logger import Logger
 from vccf.timer import Timer
@@ -89,10 +89,10 @@ class VccCombine:
         # classifier = LinearSVC(C=option['svm']['c'],
         #                        class_weight=option['svm']['class_weight'],
         #                        loss=option['svm']['loss'])
-        classifier = GaussianNB()
+        classifier = MultinomialNB()
         classifier.fit(x_train, y_train)
         # clf_pf.partial_fit(X, Y, np.unique(Y))
-        y_score = classifier.predict_proba(x_test)
+        y_score = classifier.predict(x_test)
         accuracy = classifier.score(x_train, y_train)
 
         # accuracy
@@ -105,17 +105,17 @@ class VccCombine:
         if option['save_model'] is True:
             self.data_set.save(os.path.join('logs', 'model_%d' % self.task_id), model=classifier)
 
-        # # Plot contribution
-        # Visualization.plot_contribution(
-        #     ctb=Contribution(model=classifier,
-        #                      labels=vectorizer.get_feature_names(),
-        #                      patch_container=patch_container).explain(),
-        #     title='%r %r' % (
-        #         self.patch_mode,
-        #         data.shape,
-        #     ),
-        #     filename=os.path.join('logs', 'figure_%d_ctb' % self.task_id)
-        # )
+        # Plot contribution
+        Visualization.plot_contribution(
+            ctb=Contribution(model=classifier,
+                             labels=vectorizer.get_feature_names(),
+                             patch_container=patch_container).explain(),
+            title='%r %r' % (
+                self.patch_mode,
+                data.shape,
+            ),
+            filename=os.path.join('logs', 'figure_%d_ctb' % self.task_id)
+        )
 
         # Model evaluation: quantifying the quality of predictions
         # Compute Precision-Recall and plot curve

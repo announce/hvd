@@ -17,7 +17,7 @@ function vd() {
     export TASK_OUTPUT="${LOG_DIR}/figure_${TASK_ID}.png"
   }
 
-  __enq-mac() {
+  __enq_mac() {
     #    export PATCH_MODE="RESERVED_WORD_ONLY"
     export PATCH_MODE="LINE_TYPE_SENSITIVE"
 #    export PATCH_MODE="LINE_TYPE_INSENSITIVE"
@@ -63,7 +63,7 @@ function vd() {
     qsub -q SINGLE -I
   }
 
-  __enq-linux() {
+  __enq_linux() {
     bash $(pwd)/bin/clean.sh
     qsub -q SINGLE ${HOME}/bin/boot.sh
   }
@@ -80,22 +80,49 @@ function vd() {
     bash -c 'watch -n 5 qstat -a -u $USER'
   }
 
+  q() {
+    qstat -a | less
+  }
+
   # General
   enq() {
       case "${OSTYPE}" in
       # macOS
       darwin*)
-          __enq-mac
+          __enq_mac
           ;;
       # Linux
       linux*)
-          __enq-linux
+          __enq_linux
           ;;
       esac
   }
 
-  q() {
-    qstat -a | less
+  init() {
+      if [[ "${PATH}" = *"$(pwd)"* ]]; then
+        echo "NO UPDATE IS NEEDED: Target directory $(pwd) found in PATH"
+        exit 0
+      fi
+
+      case "${SHELL}" in
+      *zsh)
+          TARGET_FILE="${HOME}/.zshrc"
+          ;;
+      *bash)
+          TARGET_FILE="${HOME}/.bashrc"
+          ;;
+      *)
+        echo 'Error: Supported shells are [BASH, ZSH]'
+        echo 'Error: Add $(pwd) to your PATH'
+        exit 1
+        ;;
+      esac
+
+      if [[ $(grep $(pwd) ${TARGET_FILE} | wc -l) -le 0 ]] ; then
+        echo "Adding $(pwd) to PATH in ${TARGET_FILE}"
+        echo 'PATH=${PATH}'":$(pwd)" >> "${TARGET_FILE}"
+      fi
+      echo "ACTION REQUIRED: 'source ${TARGET_FILE}'"
   }
 
   usage() {
