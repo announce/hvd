@@ -80,6 +80,10 @@ function vd() {
     bash -c 'watch -n 5 qstat -a -u $USER'
   }
 
+  jobs() {
+    qstat -a
+  }
+
   q() {
     qstat -a | less
   }

@@ -49,6 +49,14 @@ class VccCombine:
         option = self.option.select(self.opt_keys)
         data = self.data_set.load(self.filename)
 
+        # "repository_id": 169,
+        # "name": "FFmpeg/FFmpeg",
+        repository_id = data[:, Column.repository_id]
+        data = data[(repository_id == 169)]
+        print('len(data)', len(data))
+        if len(data) < 1:
+            raise RuntimeError('No data')
+
         patch_container = Patch(data, mode=self.patch_mode)
         patch = patch_container.normalized()
         message = Message(data).normalized()
@@ -86,20 +94,20 @@ class VccCombine:
 
         # Run classifier
         # classifier = SVC(C=option['svm']['c'])
-        # classifier = LinearSVC(C=option['svm']['c'],
-        #                        class_weight=option['svm']['class_weight'],
-        #                        loss=option['svm']['loss'])
-        classifier = MultinomialNB()
+        classifier = LinearSVC(C=option['svm']['c'],
+                               class_weight=option['svm']['class_weight'],
+                               loss=option['svm']['loss'])
+        # classifier = MultinomialNB()
         classifier.fit(x_train, y_train)
         # clf_pf.partial_fit(X, Y, np.unique(Y))
-        y_score = classifier.predict(x_test)
-        accuracy = classifier.score(x_train, y_train)
+        # y_score = classifier.predict(x_test)
+        # accuracy = classifier.score(x_train, y_train)
 
         # accuracy
-        # y_score = classifier.fit(x_train, y_train).decision_function(x_test)
-        # accuracy = classifier.score(x_test, y_test)
+        y_score = classifier.fit(x_train, y_train).decision_function(x_test)
+        accuracy = classifier.score(x_test, y_test)
         self.logger.info('Accuracy %r' % accuracy)
-        self.logger.debug('y_score[1:10] %r', y_score[1:10])
+        # self.logger.debug('y_score[1:10] %r', y_score[1:10])
 
         # Save classifier model
         if option['save_model'] is True:
