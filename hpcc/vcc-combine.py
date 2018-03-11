@@ -53,7 +53,6 @@ class VccCombine:
         # "name": "FFmpeg/FFmpeg",
         repository_id = data[:, Column.repository_id]
         data = data[(repository_id == 169)]
-        print('len(data)', len(data))
         if len(data) < 1:
             raise RuntimeError('No data')
 
