@@ -6,8 +6,6 @@ import pandas as pd
 from scipy import sparse
 from sklearn import metrics
 from sklearn.model_selection import train_test_split
-from sklearn.svm import LinearSVC, SVC
-from sklearn.naive_bayes import MultinomialNB
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from vccf.logger import Logger
 from vccf.timer import Timer
@@ -19,6 +17,8 @@ from vccf.column import Column
 from vccf.contribution import Contribution
 from vccf.data_set import DataSet
 from vccf.option import Option, Mask
+from vccf.classification import Classification
+from vccf.evaluation import Evaluation
 from vccf.visualization import Visualization
 
 
@@ -31,10 +31,12 @@ class VccCombine:
         self.logger = Logger.create(name=__name__, filename=task_id)
         self.data_set = DataSet()
         self.option = Option()
-        self.opt_keys = ()
+        self.classification = Classification()
+        self.evaluation = Evaluation()
 
-    def set_opt_keys(self, opt_keys):
-        self.opt_keys = () if opt_keys is None else opt_keys
+    def set_opt(self, opt_keys):
+        opt_keys = () if opt_keys is None else opt_keys
+        self.option = self.option.select(opt_keys)
         return self
 
     def exit(self):
@@ -46,15 +48,8 @@ class VccCombine:
 
     def execute(self):
         self.logger.info('Started executing task_id %d at %s' % (self.task_id, self.timer))
-        option = self.option.select(self.opt_keys)
         data = self.data_set.load(self.filename)
-
-        # "repository_id": 169,
-        # "name": "FFmpeg/FFmpeg",
-        repository_id = data[:, Column.repository_id]
-        data = data[(repository_id == 169)]
-        if len(data) < 1:
-            raise RuntimeError('No data')
+        self.evaluation.shape = data.shape
 
         patch_container = Patch(data, mode=self.patch_mode)
         patch = patch_container.normalized()
@@ -62,10 +57,9 @@ class VccCombine:
         candidates = [u' '.join([v, message[i]]) for i, v in enumerate(patch)]
         stop_words = StopWords(data).list()
 
-        vectorizer = TfidfVectorizer(min_df=option['count_vectorizer']['min_df'],
+        vectorizer = TfidfVectorizer(min_df=self.option['count_vectorizer']['min_df'],
                                      max_features=len(candidates)//2,
                                      stop_words=stop_words)
-        # binary=True
         x1 = vectorizer.fit_transform(candidates)
 
         # Now x1 is sparse array storing like:
@@ -83,92 +77,90 @@ class VccCombine:
         y = is_vcc = (labels == 'blamed_commit')
 
         # Split into training and test
+        test_size = self.option['model_selection']['test_size']
         x_train, \
         x_test, \
         y_train, \
         y_test = train_test_split(x2,
                                   y,
-                                  test_size=option['model_selection']['test_size'],
-                                  random_state=option['model_selection']['random_state'])
+                                  test_size=self.option['model_selection']['test_size'],
+                                  random_state=self.option['model_selection']['random_state'])
 
-        # Run classifier
-        # classifier = SVC(C=option['svm']['c'])
-        classifier = LinearSVC(C=option['svm']['c'],
-                               class_weight=option['svm']['class_weight'],
-                               loss=option['svm']['loss'])
-        # classifier = MultinomialNB()
-        classifier.fit(x_train, y_train)
-        # clf_pf.partial_fit(X, Y, np.unique(Y))
-        # y_score = classifier.predict(x_test)
-        # accuracy = classifier.score(x_train, y_train)
-
-        # accuracy
-        y_score = classifier.fit(x_train, y_train).decision_function(x_test)
-        accuracy = classifier.score(x_test, y_test)
-        self.logger.info('Accuracy %r' % accuracy)
-        # self.logger.debug('y_score[1:10] %r', y_score[1:10])
+        # Train model
+        classifier = self.classification.set_option(self.option).train(x_train, y_train)
 
         # Save classifier model
-        if option['save_model'] is True:
+        if self.option['save_model'] is True:
             self.data_set.save(os.path.join('logs', 'model_%d' % self.task_id), model=classifier)
 
-        # Plot contribution
-        Visualization.plot_contribution(
-            ctb=Contribution(model=classifier,
-                             labels=vectorizer.get_feature_names(),
-                             patch_container=patch_container).explain(),
-            title='%r %r' % (
-                self.patch_mode,
-                data.shape,
-            ),
-            filename=os.path.join('logs', 'figure_%d_ctb' % self.task_id)
-        )
+        # Start evaluation
+        y_score = classifier.decision_function(x_test)
+        accuracy = classifier.score(x_test, y_test)
 
-        # Model evaluation: quantifying the quality of predictions
-        # Compute Precision-Recall and plot curve
-        precision = dict()
-        recall = dict()
-        average_precision = dict()
-        precision[0], recall[0], _ = metrics.precision_recall_curve(y_test, y_score)
-        average_precision[0] = metrics.average_precision_score(y_test, y_score)
-        self.logger.info('Average precision %r' % average_precision)
+        contribution = Contribution(model=classifier,
+                                    labels=vectorizer.get_feature_names(),
+                                    patch_container=patch_container).explain()
 
-        Visualization.plot_pr_curve(
-            x=recall[0],
-            y=precision[0],
-            title='%r %r: AUC=%f' % (
-                self.patch_mode,
-                data.shape,
-                average_precision[0],
-            ),
-            filename=os.path.join('logs', 'figure_%d_pr' % self.task_id)
-        ) if option['visualization']['output'] else None
+        precision, recall, _ = metrics.precision_recall_curve(y_test, y_score)
+        average_precision = metrics.average_precision_score(y_test, y_score)
 
         # Compute ROC and plot curve
         yi_test = y_test.astype(int)
         fpr, tpr, _ = metrics.roc_curve(yi_test, y_score, pos_label=1)
         roc_auc = metrics.auc(fpr, tpr)
 
-        Visualization.plot_roc_curve(
-            x=fpr,
-            y=tpr,
-            roc_auc=roc_auc,
-            title='%r %r: area=%f' % (
-                self.patch_mode,
-                data.shape,
-                roc_auc,
-            ),
-            filename=os.path.join('logs', 'figure_%d_roc' % self.task_id)
-        ) if option['visualization']['output'] else None
-
+        # Score F1
         yb_score = y_score.round().astype(bool)
         f1 = metrics.f1_score(y_test, yb_score)
-        report = metrics.classification_report(y_test, yb_score)
-        self.logger.info('F1 score %r' % f1)
 
-        # Output report in multiline
+        # Keep evaluation
+        self.evaluation.store(size=self.evaluation.Size(1-test_size, test_size),
+                              roc=self.evaluation.ROC(fpr, tpr, roc_auc),
+                              pr=self.evaluation.PrecisionRecall(precision, recall, average_precision),
+                              accuracy=accuracy,
+                              f1=f1,
+                              contribution=contribution)
+        # Output report
+        self.logger.info('(F1, accuracy, average_precision) = (%0.2f, %0.2f, %0.2f)' %
+                         (f1,
+                         accuracy,
+                         average_precision,))
+        report = metrics.classification_report(y_test, yb_score)
         [self.logger.info(line) for line in ['--'] + report.splitlines() + ['--']]
 
+        if self.option['visualization']['output']:
+            self.visualize()
+        return self
+
+    def visualize(self):
+        # Title of figure
+        title = '%r %r' % (
+            self.patch_mode,
+            self.evaluation.shape,
+        )
+
+        # Plot precision-recall curves
+        Visualization.plot_pr_curve(
+            pr=self.evaluation.pr,
+            size=self.evaluation.size,
+            title='PR %s' % title,
+            filename=os.path.join('logs', 'figure_%d_pr' % self.task_id)
+        )
+
+        # Plot ROC curves
+        Visualization.plot_roc_curve(
+            roc=self.evaluation.roc,
+            size=self.evaluation.size,
+            title='ROC %s' % title,
+            filename=os.path.join('logs', 'figure_%d_roc' % self.task_id)
+        )
+
+        # Plot contribution
+        Visualization.plot_contribution(
+            ctb=self.evaluation.contribution.pop(),
+            title=title,
+            filename=os.path.join('logs', 'figure_%d_ctb' % self.task_id)
+        )
         return self
 
 
@@ -209,6 +201,6 @@ if __name__ == '__main__':
         task_id=args.task_id,
         patch_mode=args.patch_mode,
         filename=args.filename
-    ).set_opt_keys(
+    ).set_opt(
         opt_keys=tuple(args.options)
     ).execute().exit()

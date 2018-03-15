@@ -12,6 +12,10 @@ class DataSet:
             key = npz.files[0] if key is None else npz.files[key]
             data = npz[key]
         self.logger.info('Data loaded #%d' % len(data))
+        # repository_id = data[:, Column.repository_id]
+        # data = data[(repository_id == 169)]
+        # if len(data) < 1:
+        #     raise RuntimeError('No data')
         return data
 
     def save(self, filename, *args, **kwargs):

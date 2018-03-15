@@ -6,6 +6,9 @@ import matplotlib.pyplot as plt
 
 
 class Visualization:
+    """
+    https://matplotlib.org/api/_as_gen/matplotlib.pyplot.plot.html#matplotlib.pyplot.plot
+    """
     def __init__(self):
         pass
 
@@ -14,29 +17,29 @@ class Visualization:
         return 'figure_%s_%s' % datetime.now().strftime('%s'), uuid.uuid4().hex
 
     @classmethod
-    def plot_pr_curve(cls, x, y, title='', filename=None):
+    def plot_pr_curve(cls, pr, size, title, filename):
         # Plot Precision-Recall curve
-        filename = cls.default_filename() if filename is None else filename
         plt.clf()
         plt.figure()
-        plt.plot(x, y, label='Precision-Recall curve')
+        for i, (x, y, area) in enumerate(pr):
+            s = size[i]
+            plt.plot(x, y, label='Precision-recall %r (area={%0.2f})' % ((s.train, s.test), area))
         plt.xlabel('Recall')
         plt.ylabel('Precision')
         plt.ylim([0.0, 1.05])
         plt.xlim([0.0, 1.0])
         plt.title(title)
-        plt.legend(loc="lower left")
+        plt.legend()
         plt.savefig(filename)
 
     @classmethod
-    def plot_roc_curve(cls, x, y, roc_auc, title='', filename=None):
+    def plot_roc_curve(cls, roc, size, title, filename):
         #  Receiver operating characteristic (ROC)
-        filename = cls.default_filename() if filename is None else filename
         plt.figure()
-        lw = 2
-        plt.plot(x, y, color='darkorange',
-                 lw=lw, label='ROC curve (area = %0.2f)' % roc_auc)
-        plt.plot([0, 1], [0, 1], color='navy', lw=lw, linestyle='--')
+        for i, (x, y, area) in enumerate(roc):
+            s = size[i]
+            plt.plot(x, y, label='ROC curve %r (area = %0.2f)' % ((s.train, s.test), area))
+        plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
         plt.xlim([0.0, 1.0])
         plt.ylim([0.0, 1.05])
         plt.xlabel('False Positive Rate')
