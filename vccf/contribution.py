@@ -12,6 +12,7 @@ class Contribution:
         self.top_coefficients = None
 
     def explain(self):
+        # TODO: check out of bounds error
         positive_coefficients = np.argsort(self.weight)[-self.top_n:]
         negative_coefficients = np.argsort(self.weight)[:self.top_n]
         self.top_coefficients = np.hstack([

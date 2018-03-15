@@ -50,6 +50,9 @@ class Metrics:
     def dt_approx(cls, a):
         return pd.to_datetime(a).astype(int) // 10**16
 
+    def keys(self):
+        return self.COUNT_BASE.keys() + self.DATETIME_BASE.keys() + self.PERCENTAGE_BASE.keys()
+
     def create_count_base(self):
         metrics = self.data[:, self.COUNT_BASE.values()]
         return np.apply_along_axis(self.bin, axis=0, arr=metrics.astype(float))

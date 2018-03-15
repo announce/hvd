@@ -14,6 +14,7 @@ from vccf.message import Message
 from vccf.metrics import Metrics
 from vccf.stop_words import StopWords
 from vccf.column import Column
+from vccf.effectiveness import Effectiveness
 from vccf.contribution import Contribution
 from vccf.data_set import DataSet
 from vccf.option import Option, Mask
@@ -31,7 +32,6 @@ class VccCombine:
         self.logger = Logger.create(name=__name__, filename=task_id)
         self.data_set = DataSet()
         self.option = Option()
-        self.classification = Classification()
         self.evaluation = Evaluation()
 
     def set_opt(self, opt_keys):
@@ -71,8 +71,8 @@ class VccCombine:
         #  [0 0 0 ..., 0 0 0]
         #  [0 0 0 ..., 0 0 0]]
 
-        m = Metrics(data).create_vector()
-        x2 = sparse.hstack((m, x1))
+        mtr = Metrics(data)
+        x2 = sparse.hstack((mtr.create_vector(), x1))
         labels = data[:, Column.type]
         y = is_vcc = (labels == 'blamed_commit')
 
@@ -86,8 +86,14 @@ class VccCombine:
                                   test_size=self.option['model_selection']['test_size'],
                                   random_state=self.option['model_selection']['random_state'])
 
+        Effectiveness(
+            task_id=self.task_id,
+            option=self.option,
+            labels=vectorizer.get_feature_names() + mtr.keys()
+        ).train(x_train, y_train)
+
         # Train model
-        classifier = self.classification.set_option(self.option).train(x_train, y_train)
+        classifier = Classification(self.option).train(x_train, y_train)
 
         # Save classifier model
         if self.option['save_model'] is True:
@@ -123,8 +129,8 @@ class VccCombine:
         # Output report
         self.logger.info('(F1, accuracy, average_precision) = (%0.2f, %0.2f, %0.2f)' %
                          (f1,
-                         accuracy,
-                         average_precision,))
+                          accuracy,
+                          average_precision,))
         report = metrics.classification_report(y_test, yb_score)
         [self.logger.info(line) for line in ['--'] + report.splitlines() + ['--']]
 

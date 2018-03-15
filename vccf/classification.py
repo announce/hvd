@@ -3,12 +3,8 @@ from sklearn.naive_bayes import MultinomialNB
 
 
 class Classification:
-    def __init__(self):
-        self.option = None
-
-    def set_option(self, option):
+    def __init__(self, option):
         self.option = option
-        return self
 
     def train(self, x_train, y_train):
         # Run classifier

@@ -18,6 +18,7 @@ first==2.0.1
 funcsigs==1.0.2
 functools32==3.2.3.post2
 gensim==2.0.0
+graphviz==0.8.2
 html5lib==0.999999999
 ipykernel==4.6.1
 ipython==5.3.0
