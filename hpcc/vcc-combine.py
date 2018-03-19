@@ -1,4 +1,5 @@
 import os
+import platform
 from argparse import ArgumentParser
 import numpy as np
 import scipy as sp
@@ -29,7 +30,9 @@ class VccCombine:
         self.task_id = task_id
         self.patch_mode = patch_mode
         self.filename = filename
-        self.logger = Logger.create(name=__name__, filename=task_id)
+        self.logger = Logger.create(
+            name=__name__,
+            filename=os.path.join('logs', platform.node(), str(task_id), '%s.log' % os.path.basename(__file__)))
         self.data_set = DataSet()
         self.option = Option()
         self.evaluation = Evaluation()
@@ -76,21 +79,25 @@ class VccCombine:
         labels = data[:, Column.type]
         y = is_vcc = (labels == 'blamed_commit')
 
+        # Importance
+        features = vectorizer.get_feature_names() + mtr.keys()
+        iif = Effectiveness(
+            task_id=self.task_id,
+            option=self.option,
+            labels=vectorizer.get_feature_names() + mtr.keys()
+        ).train(x2, is_vcc).is_important_features()
+        x3 = x2.tocsr()[:, iif]
+        adopted_features = np.array(features)[iif]
+
         # Split into training and test
         test_size = self.option['model_selection']['test_size']
         x_train, \
         x_test, \
         y_train, \
-        y_test = train_test_split(x2,
+        y_test = train_test_split(x3,
                                   y,
                                   test_size=self.option['model_selection']['test_size'],
                                   random_state=self.option['model_selection']['random_state'])
-
-        Effectiveness(
-            task_id=self.task_id,
-            option=self.option,
-            labels=vectorizer.get_feature_names() + mtr.keys()
-        ).train(x_train, y_train)
 
         # Train model
         classifier = Classification(self.option).train(x_train, y_train)
@@ -104,7 +111,7 @@ class VccCombine:
         accuracy = classifier.score(x_test, y_test)
 
         contribution = Contribution(model=classifier,
-                                    labels=vectorizer.get_feature_names(),
+                                    labels=adopted_features,
                                     patch_container=patch_container).explain()
 
         precision, recall, _ = metrics.precision_recall_curve(y_test, y_score)
@@ -150,7 +157,7 @@ class VccCombine:
             pr=self.evaluation.pr,
             size=self.evaluation.size,
             title='PR %s' % title,
-            filename=os.path.join('logs', 'figure_%d_pr' % self.task_id)
+            filename=os.path.join('logs', platform.node(), str(self.task_id), 'pr')
         )
 
         # Plot ROC curves
@@ -158,14 +165,14 @@ class VccCombine:
             roc=self.evaluation.roc,
             size=self.evaluation.size,
             title='ROC %s' % title,
-            filename=os.path.join('logs', 'figure_%d_roc' % self.task_id)
+            filename=os.path.join('logs', platform.node(), str(self.task_id), 'roc')
         )
 
         # Plot contribution
         Visualization.plot_contribution(
             ctb=self.evaluation.contribution.pop(),
             title=title,
-            filename=os.path.join('logs', 'figure_%d_ctb' % self.task_id)
+            filename=os.path.join('logs', platform.node(), str(self.task_id), 'ctb')
         )
         return self
 

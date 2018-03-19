@@ -1,5 +1,5 @@
 from logging import getLogger, Formatter, StreamHandler, FileHandler,DEBUG
-from os import path
+import os
 
 
 class Logger:
@@ -15,7 +15,8 @@ class Logger:
         root_logger.setLevel(level)
 
         if filename is not None:
-            file_handler = FileHandler(path.join('logs', '%s.log' % filename))
+            Logger.ensure_directory_exists(path=filename)
+            file_handler = FileHandler(filename)
             file_handler.setFormatter(formatter)
             root_logger.addHandler(file_handler)
 
@@ -23,3 +24,9 @@ class Logger:
         console_handler.setFormatter(formatter)
         root_logger.addHandler(console_handler)
         return root_logger
+
+    @classmethod
+    def ensure_directory_exists(cls, path):
+        dirs = os.path.dirname(path)
+        if not os.path.exists(dirs):
+            os.makedirs(dirs)
