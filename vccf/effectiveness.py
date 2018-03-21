@@ -7,7 +7,7 @@ from vccf.logger import Logger
 
 
 class Effectiveness:
-    IMPORTANCE = 0.1
+    IMPORTANCE = 0.4
 
     def __init__(self, task_id, option, labels):
         self.logger = Logger.create(name=__name__)
@@ -20,7 +20,7 @@ class Effectiveness:
         self.logger.info('DecisionTree: %r' % (x_train.shape,))
         self.clf = clf = tree.DecisionTreeClassifier(
             random_state=0,
-            # max_depth=max(x_train.shape[0]//10, 1000)
+            max_depth=max(x_train.shape[0]//10, 1000)
         )
         clf.fit(x_train, y_train)
         dot_data = tree.export_graphviz(clf,
@@ -36,7 +36,7 @@ class Effectiveness:
         # Gini importance
         fi = np.array(self.clf.feature_importances_)
         bl = np.where(fi > self.IMPORTANCE)
-        self.logger.info('Non-zero: #%d' % np.count_nonzero(bl[0]))
+        self.logger.info('Important features: #%d' % np.count_nonzero(fi))
         return bl[0]
 
 
