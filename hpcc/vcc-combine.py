@@ -81,20 +81,20 @@ class VccCombine:
 
         # Importance
         features = vectorizer.get_feature_names() + mtr.keys()
-        iif = Effectiveness(
-            task_id=self.task_id,
-            option=self.option,
-            labels=vectorizer.get_feature_names() + mtr.keys()
-        ).train(x2, is_vcc).is_important_features()
-        x3 = x2.tocsr()[:, iif]
-        adopted_features = np.array(features)[iif]
+        # iif = Effectiveness(
+        #     task_id=self.task_id,
+        #     option=self.option,
+        #     labels=vectorizer.get_feature_names() + mtr.keys()
+        # ).train(x2, is_vcc).is_important_features()
+        # x3 = x2.tocsr()[:, iif]
+        adopted_features = features  # np.array(features)[iif]
 
         # Split into training and test
         test_size = self.option['model_selection']['test_size']
         x_train, \
         x_test, \
         y_train, \
-        y_test = train_test_split(x3,
+        y_test = train_test_split(x2,
                                   y,
                                   test_size=self.option['model_selection']['test_size'],
                                   random_state=self.option['model_selection']['random_state'])

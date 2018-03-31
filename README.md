@@ -2,8 +2,7 @@ History-based Vulnerability Detector
 ===
 
 ## Introduction
-- This methodology is proposed at thesis paper: DOI
-- Citation
+- This methodology is proposed at [Vulnerability Detection in Source Code Based on Git History](https://doi.org/10.13140/RG.2.2.28338.09922)
 
 ## Setup Jupyter on MacBook
 
@@ -13,10 +12,13 @@ $ pyenv install anaconda2-2.5.0
 $ conda create --name py27 --file notebooks/conda_requirements.txt
 ```
 
-
 ## Dataset
 The dataset is available at https://goo.gl/4wrwRx in npz format.
 
+## Debug
+```
+./vd enq
+```
 
 ## HPCC
 #### Usage
@@ -50,12 +52,11 @@ https://drive.google.com/open?id=1nlrOOvlVczqLfDMLGiJD5qSdxAmGcOB8
 
 ## Contribution
 
-#### Principle
+#### Practice
 * Write 'how' in code
 * Write 'what' in test
 * Write 'why' in commit log
-* Write 'Why not' in code comment
-
+* Write 'why not' in code comment
 
 #### Commit message
 
@@ -77,10 +78,10 @@ https://github.com/angular/angular.js/blob/v1.6.8/DEVELOPERS.md#type
 * [x] Non-linear SVM
 * [x] Cross validation 9 vs 1
 * [x] Binary vector (not counter)
-** Affective for ROC area
+  * Affective for ROC area
 * [ ] Extract the most contributing features + Count reserved keywords
 * [ ] K Fold http://scikit-learn.org/stable/modules/generated/sklearn.model_selection.KFold.html
 * [ ] Hyper parameter http://scikit-learn.org/stable/modules/grid_search.html
 * [ ] Removed lines in security patch should be dangerous
-** metrics: blamed_commit
-** token: removed line in fixing_commit
+  * metrics: blamed_commit
+  * token: removed line in fixing_commit
