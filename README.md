@@ -13,7 +13,9 @@ $ conda create --name py27 --file notebooks/conda_requirements.txt
 ```
 
 ## Dataset
-The dataset is available at https://goo.gl/4wrwRx in npz format.
+
+1. The dataset needs to be restored from the original database dump file. Refer to [vcc-base](https://github.com/announce/vcc-base/tree/v1.0) for more detail.
+1. Then use [dump.py](https://github.com/announce/hvd/blob/v1.0/dump.py#L47-L49) to convert the data into npz format.
 
 ## Debug
 ```
@@ -72,16 +74,3 @@ Use one of these prefix:
 > chore: Changes to the build process or auxiliary tools and libraries such as documentation generation
 
 https://github.com/angular/angular.js/blob/v1.6.8/DEVELOPERS.md#type
-
-
-#### TODOSs
-* [x] Non-linear SVM
-* [x] Cross validation 9 vs 1
-* [x] Binary vector (not counter)
-  * Affective for ROC area
-* [ ] Extract the most contributing features + Count reserved keywords
-* [ ] K Fold http://scikit-learn.org/stable/modules/generated/sklearn.model_selection.KFold.html
-* [ ] Hyper parameter http://scikit-learn.org/stable/modules/grid_search.html
-* [ ] Removed lines in security patch should be dangerous
-  * metrics: blamed_commit
-  * token: removed line in fixing_commit
