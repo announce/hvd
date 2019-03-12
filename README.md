@@ -13,13 +13,17 @@ $ conda create --name py27 --file notebooks/conda_requirements.txt
 ```
 
 ## Dataset
-
 1. The dataset needs to be restored from the original database dump file. Refer to [vcc-base](https://github.com/announce/vcc-base/tree/v1.0) for more detail.
 1. Then use [dump.py](https://github.com/announce/hvd/blob/v1.0/dump.py#L47-L49) to convert the data into npz format.
+    * generate smaller set of data `vcc_data_40x800.npz` first
+    * then try the full size of data `vcc_data.npz` (uncomment the lines)
 
-## Debug
-```
-./vd enq
+## Get Started
+
+The command below is available for both HPCC and Mac:
+
+```bash
+python hpcc/vcc-combine.py -f vcc_data_40x800.npz
 ```
 
 ## HPCC
